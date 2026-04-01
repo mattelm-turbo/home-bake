@@ -71,7 +71,13 @@ export default function App() {
   const [authScreen, setAuthScreen] = useState("login");
   const [authEmail, setAuthEmail] = useState("");
   const [authPass, setAuthPass] = useState("");
-  const [authName, setAuthName] = useState("");
+  const [authFirst, setAuthFirst] = useState("");
+  const [authLast, setAuthLast] = useState("");
+  const [authPhone, setAuthPhone] = useState("");
+  const [authAddress, setAuthAddress] = useState("");
+  const [authSuburb, setAuthSuburb] = useState("");
+  const [authState, setAuthState] = useState("WA");
+  const [authPostcode, setAuthPostcode] = useState("");
   const [authErr, setAuthErr] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -211,10 +217,20 @@ export default function App() {
 
   const handleSignup = async () => {
     if (!SIGNUPS_ENABLED) { setAuthErr("Sign-ups are currently disabled."); return; }
+    if (!authFirst || !authLast || !authEmail || !authPass || !authPhone || !authAddress || !authSuburb || !authPostcode) {
+      setAuthErr("Please fill in all required fields."); return;
+    }
+    if (authPass.length < 6) { setAuthErr("Password must be at least 6 characters."); return; }
     setAuthErr(""); setAuthLoading(true);
+    const fullName = `${authFirst} ${authLast}`;
+    const fullAddress = `${authAddress}, ${authSuburb} ${authState} ${authPostcode}`;
     const { error } = await supabase.auth.signUp({
       email: authEmail, password: authPass,
-      options: { data: { name: authName, suburb: "", state: "WA" } }
+      options: { data: {
+        name: fullName, first_name: authFirst, last_name: authLast,
+        phone: authPhone, address: fullAddress,
+        suburb: authSuburb, state: authState, postcode: authPostcode,
+      }}
     });
     if (error) setAuthErr(error.message);
     else { showToast("Account created!"); setAuthScreen("login"); }
@@ -293,9 +309,19 @@ export default function App() {
               <div style={{ color: t.mut, fontSize: 13, lineHeight: 1.6, marginBottom: 16 }}>We're in private testing. Leave your email and we'll let you know!</div>
               <div style={{ display: "flex", gap: 8 }}><input style={{ ...s.inp, flex: 1 }} type="email" placeholder="your@email.com" value={authEmail} onChange={e => setAuthEmail(e.target.value)} /><button style={{ ...s.btnS(true), whiteSpace: "nowrap" }} onClick={() => { handleWaitlist(authEmail); setAuthEmail(""); }}>Notify Me</button></div>
             </div> : <>
-              <div style={{ marginBottom: 12 }}><label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>Your name</label><input style={s.inp} placeholder="Sarah" value={authName} onChange={e => setAuthName(e.target.value)} /></div>
-              <div style={{ marginBottom: 12 }}><label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>Email</label><input style={s.inp} type="email" placeholder="you@example.com" value={authEmail} onChange={e => setAuthEmail(e.target.value)} /></div>
-              <div style={{ marginBottom: 16 }}><label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>Password (min 6 chars)</label><input style={s.inp} type="password" placeholder="••••••••" value={authPass} onChange={e => setAuthPass(e.target.value)} /></div>
+              <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                <div style={{ flex: 1 }}><label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>First name *</label><input style={s.inp} placeholder="Sarah" value={authFirst} onChange={e => setAuthFirst(e.target.value)} /></div>
+                <div style={{ flex: 1 }}><label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>Last name *</label><input style={s.inp} placeholder="Smith" value={authLast} onChange={e => setAuthLast(e.target.value)} /></div>
+              </div>
+              <div style={{ marginBottom: 12 }}><label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>Email *</label><input style={s.inp} type="email" placeholder="sarah@example.com" value={authEmail} onChange={e => setAuthEmail(e.target.value)} /></div>
+              <div style={{ marginBottom: 12 }}><label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>Phone number *</label><input style={s.inp} type="tel" placeholder="0412 345 678" value={authPhone} onChange={e => setAuthPhone(e.target.value)} /></div>
+              <div style={{ marginBottom: 12 }}><label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>Street address *</label><input style={s.inp} placeholder="123 Baker Street" value={authAddress} onChange={e => setAuthAddress(e.target.value)} /></div>
+              <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                <div style={{ flex: 2 }}><label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>Suburb *</label><input style={s.inp} placeholder="Subiaco" value={authSuburb} onChange={e => setAuthSuburb(e.target.value)} /></div>
+                <div style={{ flex: 1 }}><label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>State *</label><select style={s.sel} value={authState} onChange={e => setAuthState(e.target.value)}>{["WA","NSW","VIC","QLD","SA","TAS","NT","ACT"].map(x => <option key={x}>{x}</option>)}</select></div>
+                <div style={{ flex: 1 }}><label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>Postcode *</label><input style={s.inp} placeholder="6008" value={authPostcode} onChange={e => setAuthPostcode(e.target.value)} /></div>
+              </div>
+              <div style={{ marginBottom: 16 }}><label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>Password * (min 6 characters)</label><input style={s.inp} type="password" placeholder="••••••••" value={authPass} onChange={e => setAuthPass(e.target.value)} /></div>
               {authErr && <div style={{ padding: "10px 14px", background: "#fef2f2", borderRadius: t.rs, color: t.no, fontSize: 13, marginBottom: 12 }}>{authErr}</div>}
               <button style={{ ...s.btn(true), opacity: authLoading ? .6 : 1 }} onClick={handleSignup} disabled={authLoading}>{authLoading ? "Creating..." : "Create Account"}</button>
               <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "16px 0" }}>
@@ -305,6 +331,7 @@ export default function App() {
                 <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18A11.96 11.96 0 0 0 1 12c0 1.94.46 3.77 1.18 5.07l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
                 Continue with Google
               </button>
+              <div style={{ ...s.tip, marginTop: 12, background: "#eff6ff", color: "#1e40af" }}>Your address is used for delivery and finding nearby bakers. We never share it publicly — only your suburb is shown.</div>
             </>}
             <button style={{ background: "none", border: "none", color: t.acc, cursor: "pointer", fontSize: 13, padding: 0, marginTop: 12 }} onClick={() => setAuthScreen("login")}>← Back to login</button>
           </>}
