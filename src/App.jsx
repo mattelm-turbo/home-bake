@@ -71,7 +71,13 @@ export default function App() {
   const [authScreen, setAuthScreen] = useState("login");
   const [authEmail, setAuthEmail] = useState("");
   const [authPass, setAuthPass] = useState("");
-  const [authName, setAuthName] = useState("");
+  const [authFirst, setAuthFirst] = useState("");
+  const [authLast, setAuthLast] = useState("");
+  const [authPhone, setAuthPhone] = useState("");
+  const [authAddr, setAuthAddr] = useState("");
+  const [authSuburb, setAuthSuburb] = useState("");
+  const [authState, setAuthState] = useState("WA");
+  const [authPostcode, setAuthPostcode] = useState("");
   const [authErr, setAuthErr] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -211,14 +217,36 @@ export default function App() {
 
   const handleSignup = async () => {
     if (!SIGNUPS_ENABLED) { setAuthErr("Sign-ups are currently disabled."); return; }
+    if (!authFirst || !authLast) { setAuthErr("First and last name are required."); return; }
+    if (authPass.length < 6) { setAuthErr("Password must be at least 6 characters."); return; }
     setAuthErr(""); setAuthLoading(true);
     const { error } = await supabase.auth.signUp({
       email: authEmail, password: authPass,
-      options: { data: { name: authName, suburb: "", state: "WA" } }
+      options: { data: {
+        first_name: authFirst, last_name: authLast,
+        full_name: `${authFirst} ${authLast}`,
+        name: `${authFirst} ${authLast}`,
+        phone: authPhone,
+        address_line: authAddr, address_suburb: authSuburb,
+        address_state: authState, address_postcode: authPostcode,
+        suburb: authSuburb, state: authState,
+      }}
     });
     if (error) setAuthErr(error.message);
-    else { showToast("Account created!"); setAuthScreen("login"); }
+    else {
+      // Save extra details to profile after signup
+      showToast("Account created! Welcome to HomeBaked.");
+      setAuthScreen("login");
+    }
     setAuthLoading(false);
+  };
+
+  const handleGoogleLogin = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin }
+    });
+    if (error) setAuthErr(error.message);
   };
 
   const handleLogout = async () => {
@@ -248,54 +276,112 @@ export default function App() {
   if (initialLoading) return <div style={{ ...s.page, display: "flex", alignItems: "center", justifyContent: "center" }}><div style={{ textAlign: "center" }}><div style={{ fontSize: 48 }}>🍰</div><div style={{ marginTop: 12, color: t.mut }}>Loading...</div></div></div>;
 
   // ━━━ LOGIN ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  if (!session) return (
-    <div style={{ ...s.page, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <div style={{ width: "100%", maxWidth: 420 }}>
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <div style={{ fontSize: 48, marginBottom: 8 }}>🍰</div>
-          <div style={{ fontSize: 28, fontWeight: 800 }}><span style={{ color: t.pri }}>Home</span>Baked</div>
-          <div style={{ fontSize: 13, color: t.mut, marginTop: 4 }}>Homemade treats from local kitchens</div>
-        </div>
-        <div style={{ ...s.card, padding: 24 }}>
-          {authScreen === "login" && <>
-            <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 16 }}>Welcome back</div>
-            <div style={{ marginBottom: 12 }}><label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>Email</label><input style={s.inp} type="email" placeholder="you@example.com" value={authEmail} onChange={e => { setAuthEmail(e.target.value); setAuthErr(""); }} onKeyDown={e => e.key === "Enter" && handleLogin()} /></div>
-            <div style={{ marginBottom: 16 }}><label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>Password</label><input style={s.inp} type="password" placeholder="••••••••" value={authPass} onChange={e => { setAuthPass(e.target.value); setAuthErr(""); }} onKeyDown={e => e.key === "Enter" && handleLogin()} /></div>
-            {authErr && <div style={{ padding: "10px 14px", background: "#fef2f2", borderRadius: t.rs, color: t.no, fontSize: 13, marginBottom: 12 }}>{authErr}</div>}
-            <button style={{ ...s.btn(true), opacity: authLoading ? .6 : 1 }} onClick={handleLogin} disabled={authLoading}>{authLoading ? "Signing in..." : "Sign In"}</button>
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 12, fontSize: 13 }}>
-              <button style={{ background: "none", border: "none", color: t.acc, cursor: "pointer", fontSize: 13, padding: 0 }} onClick={() => { setAuthScreen("signup"); setAuthErr(""); }}>Create account</button>
-              <button style={{ background: "none", border: "none", color: t.mut, cursor: "pointer", fontSize: 13, padding: 0 }} onClick={() => { setAuthScreen("forgot"); setAuthErr(""); }}>Forgot password?</button>
-            </div>
-          </>}
-          {authScreen === "signup" && <>
-            <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 16 }}>Create Account</div>
-            {!SIGNUPS_ENABLED ? <div style={{ textAlign: "center", padding: "20px 0" }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>🔒</div>
-              <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 6 }}>Sign-ups are paused</div>
-              <div style={{ color: t.mut, fontSize: 13, lineHeight: 1.6, marginBottom: 16 }}>We're in private testing. Leave your email and we'll let you know!</div>
-              <div style={{ display: "flex", gap: 8 }}><input style={{ ...s.inp, flex: 1 }} type="email" placeholder="your@email.com" value={authEmail} onChange={e => setAuthEmail(e.target.value)} /><button style={{ ...s.btnS(true), whiteSpace: "nowrap" }} onClick={() => { handleWaitlist(authEmail); setAuthEmail(""); }}>Notify Me</button></div>
-            </div> : <>
-              <div style={{ marginBottom: 12 }}><label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>Your name</label><input style={s.inp} placeholder="Sarah" value={authName} onChange={e => setAuthName(e.target.value)} /></div>
-              <div style={{ marginBottom: 12 }}><label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>Email</label><input style={s.inp} type="email" placeholder="you@example.com" value={authEmail} onChange={e => setAuthEmail(e.target.value)} /></div>
-              <div style={{ marginBottom: 16 }}><label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>Password (min 6 chars)</label><input style={s.inp} type="password" placeholder="••••••••" value={authPass} onChange={e => setAuthPass(e.target.value)} /></div>
-              {authErr && <div style={{ padding: "10px 14px", background: "#fef2f2", borderRadius: t.rs, color: t.no, fontSize: 13, marginBottom: 12 }}>{authErr}</div>}
-              <button style={{ ...s.btn(true), opacity: authLoading ? .6 : 1 }} onClick={handleSignup} disabled={authLoading}>{authLoading ? "Creating..." : "Create Account"}</button>
-            </>}
-            <button style={{ background: "none", border: "none", color: t.acc, cursor: "pointer", fontSize: 13, padding: 0, marginTop: 12 }} onClick={() => setAuthScreen("login")}>← Back to login</button>
-          </>}
-          {authScreen === "forgot" && <>
-            <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 16 }}>Reset Password</div>
-            <div style={{ color: t.mut, fontSize: 13, marginBottom: 16 }}>Enter your email and we'll send a reset link.</div>
-            <input style={{ ...s.inp, marginBottom: 12 }} type="email" placeholder="you@example.com" value={authEmail} onChange={e => setAuthEmail(e.target.value)} />
-            <button style={s.btn(true)} onClick={async () => { await supabase.auth.resetPasswordForEmail(authEmail); showToast("Check your email for the reset link"); }}>Send Reset Link</button>
-            <button style={{ background: "none", border: "none", color: t.acc, cursor: "pointer", fontSize: 13, padding: 0, marginTop: 12 }} onClick={() => setAuthScreen("login")}>← Back to login</button>
-          </>}
-        </div>
-        {toast && <div style={{ position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)", background: t.ok, color: "#fff", padding: "10px 24px", borderRadius: 24, fontSize: 13, fontWeight: 600, zIndex: 200 }}>✓ {toast}</div>}
+  if (!session) {
+    const googleBtn = { display:"flex", alignItems:"center", justifyContent:"center", gap:10, width:"100%", padding:"12px 16px", borderRadius:t.rs, border:`1.5px solid ${t.bdr}`, background:t.card, cursor:"pointer", fontSize:14, fontWeight:600, color:t.txt, fontFamily:"inherit" };
+    const fld = (label, val, set, type="text", ph="", extra={}) => (
+      <div style={{ marginBottom:12, ...extra }}>
+        <label style={{ fontSize:12, fontWeight:600, display:"block", marginBottom:4 }}>{label}</label>
+        <input style={s.inp} type={type} placeholder={ph} value={val} onChange={e => { set(e.target.value); setAuthErr(""); }} />
       </div>
-    </div>
-  );
+    );
+    return (
+      <div style={{ ...s.page, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+        <div style={{ width:"100%", maxWidth:440 }}>
+          <div style={{ textAlign:"center", marginBottom:28 }}>
+            <div style={{ fontSize:48, marginBottom:8 }}>🍰</div>
+            <div style={{ fontSize:28, fontWeight:800 }}><span style={{ color:t.pri }}>Home</span>Baked</div>
+            <div style={{ fontSize:13, color:t.mut, marginTop:4 }}>Homemade treats from local kitchens</div>
+          </div>
+          <div style={{ ...s.card, padding:24 }}>
+            {authScreen === "login" && <>
+              <div style={{ fontWeight:700, fontSize:18, marginBottom:16 }}>Welcome back</div>
+              <button style={googleBtn} onClick={handleGoogleLogin}>
+                <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59A14.5 14.5 0 0 1 9.5 24c0-1.59.28-3.14.76-4.59l-7.98-6.19A23.99 23.99 0 0 0 0 24c0 3.77.9 7.35 2.56 10.52l7.97-5.93z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 5.93C6.51 42.62 14.62 48 24 48z"/></svg>
+                Continue with Google
+              </button>
+              <div style={{ display:"flex", alignItems:"center", gap:12, margin:"16px 0", color:t.lit, fontSize:12 }}>
+                <div style={{ flex:1, height:1, background:t.bdr }}/><span>or sign in with email</span><div style={{ flex:1, height:1, background:t.bdr }}/>
+              </div>
+              {fld("Email", authEmail, setAuthEmail, "email", "you@example.com")}
+              <div style={{ marginBottom:16 }}>
+                <label style={{ fontSize:12, fontWeight:600, display:"block", marginBottom:4 }}>Password</label>
+                <input style={s.inp} type="password" placeholder="••••••••" value={authPass} onChange={e => { setAuthPass(e.target.value); setAuthErr(""); }} onKeyDown={e => e.key === "Enter" && handleLogin()} />
+              </div>
+              {authErr && <div style={{ padding:"10px 14px", background:"#fef2f2", borderRadius:t.rs, color:t.no, fontSize:13, marginBottom:12 }}>{authErr}</div>}
+              <button style={{ ...s.btn(true), opacity:authLoading?.6:1 }} onClick={handleLogin} disabled={authLoading}>{authLoading ? "Signing in..." : "Sign In"}</button>
+              <div style={{ display:"flex", justifyContent:"space-between", marginTop:12, fontSize:13 }}>
+                <button style={{ background:"none",border:"none",color:t.acc,cursor:"pointer",fontSize:13,padding:0 }} onClick={() => { setAuthScreen("signup"); setAuthErr(""); }}>Create account</button>
+                <button style={{ background:"none",border:"none",color:t.mut,cursor:"pointer",fontSize:13,padding:0 }} onClick={() => { setAuthScreen("forgot"); setAuthErr(""); }}>Forgot password?</button>
+              </div>
+            </>}
+
+            {authScreen === "signup" && <>
+              <div style={{ fontWeight:700, fontSize:18, marginBottom:4 }}>Create your account</div>
+              <div style={{ fontSize:13, color:t.mut, marginBottom:16 }}>Join HomeBaked to buy or sell homemade treats</div>
+
+              <button style={googleBtn} onClick={handleGoogleLogin}>
+                <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59A14.5 14.5 0 0 1 9.5 24c0-1.59.28-3.14.76-4.59l-7.98-6.19A23.99 23.99 0 0 0 0 24c0 3.77.9 7.35 2.56 10.52l7.97-5.93z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 5.93C6.51 42.62 14.62 48 24 48z"/></svg>
+                Sign up with Google
+              </button>
+              <div style={{ display:"flex", alignItems:"center", gap:12, margin:"16px 0", color:t.lit, fontSize:12 }}>
+                <div style={{ flex:1, height:1, background:t.bdr }}/><span>or sign up with email</span><div style={{ flex:1, height:1, background:t.bdr }}/>
+              </div>
+
+              <div style={{ display:"flex", gap:8, marginBottom:12 }}>
+                <div style={{ flex:1 }}>
+                  <label style={{ fontSize:12, fontWeight:600, display:"block", marginBottom:4 }}>First name *</label>
+                  <input style={s.inp} placeholder="Sarah" value={authFirst} onChange={e => { setAuthFirst(e.target.value); setAuthErr(""); }} />
+                </div>
+                <div style={{ flex:1 }}>
+                  <label style={{ fontSize:12, fontWeight:600, display:"block", marginBottom:4 }}>Last name *</label>
+                  <input style={s.inp} placeholder="Smith" value={authLast} onChange={e => { setAuthLast(e.target.value); setAuthErr(""); }} />
+                </div>
+              </div>
+              {fld("Email *", authEmail, setAuthEmail, "email", "you@example.com")}
+              {fld("Phone", authPhone, setAuthPhone, "tel", "0412 345 678")}
+              {fld("Password *", authPass, setAuthPass, "password", "Min 6 characters")}
+
+              <div style={{ fontSize:13, fontWeight:600, marginBottom:8, marginTop:4 }}>Address (for delivery)</div>
+              {fld("Street address", authAddr, setAuthAddr, "text", "123 Baker Street")}
+              <div style={{ display:"flex", gap:8, marginBottom:12 }}>
+                <div style={{ flex:2 }}>
+                  <label style={{ fontSize:12, fontWeight:600, display:"block", marginBottom:4 }}>Suburb</label>
+                  <input style={s.inp} placeholder="Subiaco" value={authSuburb} onChange={e => setAuthSuburb(e.target.value)} />
+                </div>
+                <div style={{ flex:1 }}>
+                  <label style={{ fontSize:12, fontWeight:600, display:"block", marginBottom:4 }}>State</label>
+                  <select style={s.sel} value={authState} onChange={e => setAuthState(e.target.value)}>
+                    {["WA","NSW","VIC","QLD","SA","TAS","NT","ACT"].map(x => <option key={x}>{x}</option>)}
+                  </select>
+                </div>
+                <div style={{ flex:1 }}>
+                  <label style={{ fontSize:12, fontWeight:600, display:"block", marginBottom:4 }}>Postcode</label>
+                  <input style={s.inp} placeholder="6008" value={authPostcode} onChange={e => setAuthPostcode(e.target.value)} />
+                </div>
+              </div>
+
+              {authErr && <div style={{ padding:"10px 14px", background:"#fef2f2", borderRadius:t.rs, color:t.no, fontSize:13, marginBottom:12 }}>{authErr}</div>}
+              <button style={{ ...s.btn(true), opacity:authLoading?.6:1 }} onClick={handleSignup} disabled={authLoading}>{authLoading ? "Creating account..." : "Create Account"}</button>
+
+              <div style={{ fontSize:11, color:t.lit, marginTop:10, lineHeight:1.5, textAlign:"center" }}>
+                By creating an account you agree to our terms and acknowledge that your data is handled per our privacy policy.
+              </div>
+              <button style={{ background:"none",border:"none",color:t.acc,cursor:"pointer",fontSize:13,padding:0,marginTop:12 }} onClick={() => setAuthScreen("login")}>← Already have an account? Sign in</button>
+            </>}
+
+            {authScreen === "forgot" && <>
+              <div style={{ fontWeight:700, fontSize:18, marginBottom:16 }}>Reset Password</div>
+              <div style={{ color:t.mut, fontSize:13, marginBottom:16 }}>Enter your email and we'll send a reset link.</div>
+              <input style={{ ...s.inp, marginBottom:12 }} type="email" placeholder="you@example.com" value={authEmail} onChange={e => setAuthEmail(e.target.value)} />
+              <button style={s.btn(true)} onClick={async () => { await supabase.auth.resetPasswordForEmail(authEmail); showToast("Check your email for the reset link"); }}>Send Reset Link</button>
+              <button style={{ background:"none",border:"none",color:t.acc,cursor:"pointer",fontSize:13,padding:0,marginTop:12 }} onClick={() => setAuthScreen("login")}>← Back to login</button>
+            </>}
+          </div>
+          {toast && <div style={{ position:"fixed", top:20, left:"50%", transform:"translateX(-50%)", background:t.ok, color:"#fff", padding:"10px 24px", borderRadius:24, fontSize:13, fontWeight:600, zIndex:200 }}>✓ {toast}</div>}
+        </div>
+      </div>
+    );
+  }
 
   // ━━━ AUTHENTICATED APP ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const Toast = () => toast ? <div style={{ position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)", background: t.ok, color: "#fff", padding: "10px 24px", borderRadius: 24, fontSize: 13, fontWeight: 600, zIndex: 200 }}>✓ {toast}</div> : null;
