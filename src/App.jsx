@@ -95,6 +95,7 @@ export default function App() {
   const [order, setOrder] = useState(null);
   const [onboardStep, setOnboardStep] = useState(0);
   const [toast, setToast] = useState(null);
+  const [profileIncomplete, setProfileIncomplete] = useState(false);
 
   // ─── Auth listener ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -115,7 +116,7 @@ export default function App() {
       loadSellers();
     } else {
       setProfile(null);
-      loadSellers(); // sellers are public, load even when not logged in
+      loadSellers();
     }
   }, [session]);
 
@@ -129,8 +130,15 @@ export default function App() {
   // ─── Database functions ───────────────────────────────────────────────────
   async function loadProfile(userId) {
     const { data } = await supabase.from("profiles").select("*").eq("id", userId).single();
-    if (data && data.name && data.suburb) setProfile(data);
-    else setProfile(null); // profile incomplete, show onboarding
+    if (data) {
+      setProfile(data);
+      // Check if key fields are missing (e.g. Google sign-in users)
+      const missing = !data.phone || !data.address || !data.suburb || !data.first_name;
+      setProfileIncomplete(missing);
+    } else {
+      setProfile(null);
+      setProfileIncomplete(false);
+    }
   }
 
   async function loadSellers() {
@@ -347,6 +355,69 @@ export default function App() {
       </div>
     </div>
   );
+
+  // ━━━ COMPLETE PROFILE (shown after Google sign-in or incomplete signup) ━━━━
+  const CompleteProfile = () => {
+    const meta = session.user.user_metadata || {};
+    const fullName = meta.full_name || meta.name || "";
+    const [cpFirst, setCpFirst] = useState(profile?.first_name || meta.first_name || fullName.split(" ")[0] || "");
+    const [cpLast, setCpLast] = useState(profile?.last_name || meta.last_name || fullName.split(" ").slice(1).join(" ") || "");
+    const [cpPhone, setCpPhone] = useState(profile?.phone || "");
+    const [cpAddress, setCpAddress] = useState(profile?.address || "");
+    const [cpSuburb, setCpSuburb] = useState(profile?.suburb || "");
+    const [cpState, setCpState] = useState(profile?.state || "WA");
+    const [cpPostcode, setCpPostcode] = useState(profile?.postcode || "");
+    const [cpSaving, setCpSaving] = useState(false);
+    const [cpErr, setCpErr] = useState("");
+    const cpValid = cpFirst && cpLast && cpPhone && cpAddress && cpSuburb && cpPostcode;
+
+    return (
+      <div style={{ ...s.page, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+        <div style={{ width: "100%", maxWidth: 480 }}>
+          <div style={{ textAlign: "center", marginBottom: 24 }}>
+            <div style={{ fontSize: 48, marginBottom: 8 }}>👋</div>
+            <div style={{ fontSize: 22, fontWeight: 800 }}>Welcome{cpFirst ? `, ${cpFirst}` : ""}!</div>
+            <div style={{ fontSize: 14, color: t.mut, marginTop: 4 }}>Just a few more details to get you set up</div>
+          </div>
+          <div style={{ ...s.card, padding: 24 }}>
+            <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+              <div style={{ flex: 1 }}><label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>First name *</label><input style={s.inp} placeholder="Sarah" value={cpFirst} onChange={e => setCpFirst(e.target.value)} /></div>
+              <div style={{ flex: 1 }}><label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>Last name *</label><input style={s.inp} placeholder="Smith" value={cpLast} onChange={e => setCpLast(e.target.value)} /></div>
+            </div>
+            <div style={{ marginBottom: 12 }}><label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>Email</label><input style={{ ...s.inp, background: t.bg, color: t.mut }} value={session.user.email} disabled /></div>
+            <div style={{ marginBottom: 12 }}><label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>Phone number *</label><input style={s.inp} type="tel" placeholder="0412 345 678" value={cpPhone} onChange={e => setCpPhone(e.target.value)} /></div>
+            <div style={{ marginBottom: 12 }}><label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>Street address *</label><input style={s.inp} placeholder="123 Baker Street" value={cpAddress} onChange={e => setCpAddress(e.target.value)} /></div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+              <div style={{ flex: 2 }}><label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>Suburb *</label><input style={s.inp} placeholder="Subiaco" value={cpSuburb} onChange={e => setCpSuburb(e.target.value)} /></div>
+              <div style={{ flex: 1 }}><label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>State *</label><select style={s.sel} value={cpState} onChange={e => setCpState(e.target.value)}>{["WA","NSW","VIC","QLD","SA","TAS","NT","ACT"].map(x => <option key={x}>{x}</option>)}</select></div>
+              <div style={{ flex: 1 }}><label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>Postcode *</label><input style={s.inp} placeholder="6008" value={cpPostcode} onChange={e => setCpPostcode(e.target.value)} /></div>
+            </div>
+            {cpErr && <div style={{ padding: "10px 14px", background: "#fef2f2", borderRadius: t.rs, color: t.no, fontSize: 13, marginBottom: 12 }}>{cpErr}</div>}
+            <button style={{ ...s.btn(true), opacity: (cpValid && !cpSaving) ? 1 : .5 }} disabled={!cpValid || cpSaving} onClick={async () => {
+              setCpSaving(true); setCpErr("");
+              const name = `${cpFirst} ${cpLast}`;
+              const addr = `${cpAddress}, ${cpSuburb} ${cpState} ${cpPostcode}`;
+              const { error } = await supabase.from("profiles").update({
+                name, first_name: cpFirst, last_name: cpLast,
+                phone: cpPhone, address: addr, suburb: cpSuburb,
+                state: cpState, postcode: cpPostcode,
+                handle: "@" + cpFirst.toLowerCase().replace(/[^a-z0-9]/g, ""),
+              }).eq("id", session.user.id);
+              if (error) { setCpErr("Something went wrong. Please try again."); setCpSaving(false); return; }
+              await loadProfile(session.user.id);
+              setCpSaving(false);
+              showToast("Profile complete! 🎉");
+            }}>{cpSaving ? "Saving..." : "Continue"}</button>
+            <div style={{ ...s.tip, marginTop: 12, background: "#eff6ff", color: "#1e40af" }}>Your address is used for delivery and finding nearby bakers. Only your suburb is shown publicly.</div>
+          </div>
+          <button style={{ background: "none", border: "none", color: t.mut, cursor: "pointer", fontSize: 13, padding: 0, display: "block", margin: "12px auto 0" }} onClick={handleLogout}>Sign out</button>
+        </div>
+        {toast && <div style={{ position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)", background: t.ok, color: "#fff", padding: "10px 24px", borderRadius: 24, fontSize: 13, fontWeight: 600, zIndex: 200 }}>✓ {toast}</div>}
+      </div>
+    );
+  };
+
+  if (session && profileIncomplete) return <CompleteProfile />;
 
   // ━━━ AUTHENTICATED APP ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const Toast = () => toast ? <div style={{ position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)", background: t.ok, color: "#fff", padding: "10px 24px", borderRadius: 24, fontSize: 13, fontWeight: 600, zIndex: 200 }}>✓ {toast}</div> : null;
