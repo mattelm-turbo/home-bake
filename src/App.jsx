@@ -487,7 +487,27 @@ export default function App() {
         <button onClick={()=>{setChosenSuburb(null);setAddressSearch("");}} style={{...s.btnS(false),fontSize:12}}>Change location</button>
       </div>}
 
-      <div style={{...s.sec,marginBottom:10}}><div style={{position:"relative"}}><input style={{...s.inp,paddingLeft:38}} placeholder="Search bakers or suburbs..." value={q} onChange={e=>setQ(e.target.value)}/><span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:t.lit}}><I d={ic.search} s={16}/></span></div></div>
+      <div style={{...s.sec,marginBottom:10}}><div style={{position:"relative"}}>
+        <input style={{...s.inp,paddingLeft:38}} placeholder="Search address or suburb..." value={addressSearch} onChange={e=>{
+          const val=e.target.value; setAddressSearch(val);
+          if(val.length<3){setPlaceSuggestions([]);setShowDropdown(false);return;}
+          clearTimeout(debounceRef.current);
+          debounceRef.current=setTimeout(()=>{
+            if(window.google?.maps?.places){searchPlaces(val);}
+            else{const m=SUBURBS.filter(sb=>sb.name.toLowerCase().includes(val.toLowerCase())).slice(0,6);setPlaceSuggestions(m.map(sb=>({description:`${sb.name}, WA`,place_id:null,_sub:sb})));setShowDropdown(m.length>0);}
+          },300);
+        }} onFocus={()=>{if(placeSuggestions.length)setShowDropdown(true);}}/>
+        <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:t.lit}}><I d={ic.loc} s={16}/></span>
+        {addressSearch&&<button onClick={()=>{setAddressSearch("");setPlaceSuggestions([]);setShowDropdown(false);}} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:t.lit,padding:4}}><I d={ic.x} s={16}/></button>}
+        {showDropdown&&placeSuggestions.length>0&&<div style={{position:"absolute",top:"100%",left:0,right:0,marginTop:4,background:t.card,borderRadius:t.rs,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",border:`1px solid ${t.bdr}`,zIndex:10,maxHeight:300,overflowY:"auto"}}>
+          {placeSuggestions.map((p,i)=><button key={p.place_id||i} onClick={()=>{
+            if(p._sub){setChosenSuburb(p._sub);setAddressSearch(p.description);setShowDropdown(false);}
+            else{selectPlace(p.place_id,p.description);}
+          }} style={{display:"flex",alignItems:"center",gap:10,width:"100%",padding:"12px 16px",border:"none",background:"none",cursor:"pointer",fontSize:14,color:t.txt,textAlign:"left",borderBottom:`1px solid ${t.bdr}`}} onMouseEnter={e=>e.currentTarget.style.background=t.bg} onMouseLeave={e=>e.currentTarget.style.background="none"}>
+            <I d={ic.loc} s={16} c={t.lit}/><span style={{flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.description}</span>
+          </button>)}
+        </div>}
+      </div></div>
       <div style={{padding:`0 ${s.px}px`,display:"flex",gap:6,overflowX:"auto"}}>{["All",...CATS].map(c=><button key={c} onClick={()=>setCatF(c)} style={{...s.btnS(catF===c),whiteSpace:"nowrap",flexShrink:0}}>{c}</button>)}</div>
       <div style={{padding:`8px ${s.px}px 4px`,display:"flex",gap:6,alignItems:"center"}}><span style={{fontSize:11,color:t.mut}}>Sort:</span>{[["distance","Nearest"],["rating","Top Rated"]].map(([k,l])=><button key={k} onClick={()=>setSort(k)} style={{...s.btnS(sort===k),padding:"3px 10px",fontSize:11}}>{l}</button>)}</div>
 
