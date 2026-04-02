@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "./supabaseClient";
 
 // ─── Icons ───────────────────────────────────────────────────────────────────
@@ -122,7 +122,7 @@ export default function App() {
   const [placeSuggestions, setPlaceSuggestions] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [placesLoaded, setPlacesLoaded] = useState(false);
-  const debounceRef = useState(null);
+  const debounceRef = useRef(null);
 
   // Load Google Places script
   useEffect(() => {
@@ -176,8 +176,8 @@ export default function App() {
   const handleAddressInput = (val) => {
     setAddressSearch(val);
     if (placesLoaded && window.google?.maps?.places) {
-      clearTimeout(debounceRef[0]);
-      debounceRef[0] = setTimeout(() => searchPlaces(val), 300);
+      clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => searchPlaces(val), 300);
     } else {
       // Fallback to local suburb list
       const matches = SUBURBS.filter(s => s.name.toLowerCase().includes(val.toLowerCase())).slice(0, 6);
@@ -386,10 +386,10 @@ export default function App() {
   if (session && profileIncomplete) return <CompleteProfile/>;
 
   // ━━━ LANDING PAGE (no suburb chosen yet, not logged in) ━━━━━━━━━━━━━━━━━━
-  if (!chosenSuburb && !session) return (
+  if (!chosenSuburb) return (
     <div style={{...s.page,display:"flex",alignItems:"center",justifyContent:"center",padding:20,minHeight:"100vh"}}>
       <div style={{width:"100%",maxWidth:500,textAlign:"center"}}>
-        <img src="/logo-full.png" alt="HomeBaked" style={{maxWidth:280,width:"100%",height:"auto",margin:"0 auto 16px"}}/>
+        <img src="/logo-full.png" alt="HomeBaked" style={{maxWidth:280,width:"100%",height:"auto",margin:"0 auto 16px"}} onError={e=>{e.target.style.display="none"}}/>
         <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&display=swap" rel="stylesheet"/>
         <div style={{fontSize:20,color:t.txt,lineHeight:1.6,marginBottom:28,padding:"0 10px",fontWeight:500,fontFamily:"'Playfair Display',Georgia,serif",fontStyle:"italic"}}>
           Discover homemade <span style={{color:t.pri,fontWeight:600}}>cakes</span>, <span style={{color:t.pri,fontWeight:600}}>biscuits</span>, <span style={{color:t.pri,fontWeight:600}}>preserves</span> and <span style={{color:t.pri,fontWeight:600}}>sweets</span> from bakers in your neighbourhood.
@@ -412,8 +412,9 @@ export default function App() {
         </div>
 
         <div style={{marginTop:24,display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
-          <button style={{...s.btnS(false),fontSize:13}} onClick={()=>setShowAuth(true)}>Sign in</button>
-          <button style={{...s.btnS(true),fontSize:13}} onClick={()=>{setAuthScreen("signup");setShowAuth(true);}}>Create account</button>
+          {!session && <><button style={{...s.btnS(false),fontSize:13}} onClick={()=>setShowAuth(true)}>Sign in</button>
+          <button style={{...s.btnS(true),fontSize:13}} onClick={()=>{setAuthScreen("signup");setShowAuth(true);}}>Create account</button></>}
+          {session && <div style={{fontSize:13,color:t.ok,fontWeight:600}}>✓ Signed in as {session.user.email}</div>}
         </div>
 
 
@@ -453,7 +454,7 @@ export default function App() {
     if(sort==="distance") list.sort((a,b)=>a.dist-b.dist); else list.sort((a,b)=>b.rating-a.rating);
 
     return <>
-      {bp.mobile&&<div style={{padding:"12px 16px 8px"}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}><div style={{display:"flex",alignItems:"center",gap:10}}><img src="/logo-hb.png" alt="HB" style={{height:32,width:"auto"}}/><div><div style={{fontSize:18,fontWeight:800}}><span style={{color:t.pri}}>Home</span>Baked</div><div style={{fontSize:11,color:t.mut}}>📍 {chosenSuburb?.name||"Perth"} · within 20km</div></div></div>
+      {bp.mobile&&<div style={{padding:"12px 16px 8px"}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}><div style={{display:"flex",alignItems:"center",gap:10}}><img src="/logo-hb.png" alt="HB" style={{height:32,width:"auto"}} onError={e=>{e.target.style.display="none"}}/><div><div style={{fontSize:18,fontWeight:800}}><span style={{color:t.pri}}>Home</span>Baked</div><div style={{fontSize:11,color:t.mut}}>📍 {chosenSuburb?.name||"Perth"} · within 20km</div></div></div>
         {session?<div style={{width:32,height:32,borderRadius:10,background:t.priL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,cursor:"pointer"}} onClick={()=>setTab("account")}>{profile?.first_name?.[0]||"?"}</div>
           :<button onClick={()=>setShowAuth(true)} style={{...s.btnS(true),fontSize:11}}>Sign in</button>}
       </div></div>}
