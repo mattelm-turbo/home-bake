@@ -232,7 +232,11 @@ export default function App() {
     supabase.auth.getSession().then(({data:{session}}) => { setSession(session); setInitialLoading(false); });
     const {data:{subscription}} = supabase.auth.onAuthStateChange((_e,session) => {
       setSession(session);
-      if (session) { setShowAuth(false); if (authReturnTo) { setTab(authReturnTo); setAuthReturnTo(null); } }
+      if (session) {
+        setShowAuth(false);
+        if (authReturnTo) { setTab(authReturnTo); setAuthReturnTo(null); }
+        else { setTab("sell"); }
+      }
     });
     return () => subscription.unsubscribe();
   }, []);
