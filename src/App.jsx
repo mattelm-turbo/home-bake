@@ -124,6 +124,7 @@ export default function App() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [placesLoaded, setPlacesLoaded] = useState(false);
   const debounceRef = useRef(null);
+  const browseSearchRef = useRef(null);
 
   // Load Google Places script
   useEffect(() => {
