@@ -331,52 +331,49 @@ export default function App() {
   if (initialLoading) return <div style={{...s.page,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{textAlign:"center"}}><div style={{fontSize:48}}>🍰</div><div style={{marginTop:12,color:t.mut}}>Loading...</div></div></div>;
 
   // ━━━ AUTH MODAL (overlay, not a full page) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  const AuthModal = () => {
-    if (!showAuth) return null;
-    return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={()=>setShowAuth(false)}>
-      <div style={{width:"100%",maxWidth:440,maxHeight:"90vh",overflowY:"auto",borderRadius:t.r,background:t.card,boxShadow:"0 16px 48px rgba(0,0,0,0.2)",padding:24,position:"relative"}} onClick={e=>e.stopPropagation()}>
-        <button onClick={()=>setShowAuth(false)} style={{position:"absolute",top:12,right:12,background:"none",border:"none",cursor:"pointer",color:t.mut,padding:4}}><I d={ic.x} s={20}/></button>
+  const authModal = showAuth ? <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={()=>setShowAuth(false)}>
+    <div style={{width:"100%",maxWidth:440,maxHeight:"90vh",overflowY:"auto",borderRadius:t.r,background:t.card,boxShadow:"0 16px 48px rgba(0,0,0,0.2)",padding:24,position:"relative"}} onClick={e=>e.stopPropagation()}>
+      <button onClick={()=>setShowAuth(false)} style={{position:"absolute",top:12,right:12,background:"none",border:"none",cursor:"pointer",color:t.mut,padding:4}}><I d={ic.x} s={20}/></button>
 
-        {authScreen==="login" && <>
-          <div style={{textAlign:"center",marginBottom:20}}><img src="/logo-full.png" alt="HomeBaked" style={{maxWidth:160,height:"auto",margin:"0 auto 8px"}} /></div>
-          <div style={{fontWeight:700,fontSize:18,marginBottom:16}}>Sign in</div>
-          <div style={{marginBottom:12}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Email</label><input style={s.inp} type="email" placeholder="you@example.com" value={authEmail} onChange={e=>{setAuthEmail(e.target.value);setAuthErr("");}} onKeyDown={e=>e.key==="Enter"&&handleLogin()}/></div>
-          <div style={{marginBottom:16}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Password</label><input style={s.inp} type="password" placeholder="••••••••" value={authPass} onChange={e=>{setAuthPass(e.target.value);setAuthErr("");}} onKeyDown={e=>e.key==="Enter"&&handleLogin()}/></div>
-          {authErr&&<div style={{padding:"10px 14px",background:"#fef2f2",borderRadius:t.rs,color:t.no,fontSize:13,marginBottom:12}}>{authErr}</div>}
-          <button style={{...s.btn(true),opacity:authLoading?.6:1}} onClick={handleLogin} disabled={authLoading}>{authLoading?"Signing in...":"Sign In"}</button>
-          <div style={{display:"flex",alignItems:"center",gap:12,margin:"16px 0"}}><div style={{flex:1,height:1,background:t.bdr}}/><span style={{fontSize:12,color:t.lit}}>or</span><div style={{flex:1,height:1,background:t.bdr}}/></div>
-          <button style={{...s.btn(false),display:"flex",alignItems:"center",justifyContent:"center",gap:10}} onClick={handleGoogleLogin}><GoogleIcon/> Continue with Google</button>
-          <div style={{display:"flex",justifyContent:"space-between",marginTop:14,fontSize:13}}>
-            <button style={{background:"none",border:"none",color:t.acc,cursor:"pointer",fontSize:13,padding:0}} onClick={()=>{setAuthScreen("signup");setAuthErr("");}}>Create account</button>
-            <button style={{background:"none",border:"none",color:t.mut,cursor:"pointer",fontSize:13,padding:0}} onClick={()=>{setAuthScreen("forgot");setAuthErr("");}}>Forgot password?</button>
-          </div>
-        </>}
+      {authScreen==="login" && <>
+        <div style={{textAlign:"center",marginBottom:20}}><img src="/logo-full.png" alt="HomeBaked" style={{maxWidth:160,height:"auto",margin:"0 auto 8px"}} onError={e=>{e.target.style.display="none"}}/></div>
+        <div style={{fontWeight:700,fontSize:18,marginBottom:16}}>Sign in</div>
+        <div style={{marginBottom:12}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Email</label><input style={s.inp} type="email" placeholder="you@example.com" value={authEmail} onChange={e=>{setAuthEmail(e.target.value);setAuthErr("");}} onKeyDown={e=>e.key==="Enter"&&handleLogin()}/></div>
+        <div style={{marginBottom:16}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Password</label><input style={s.inp} type="password" placeholder="••••••••" value={authPass} onChange={e=>{setAuthPass(e.target.value);setAuthErr("");}} onKeyDown={e=>e.key==="Enter"&&handleLogin()}/></div>
+        {authErr&&<div style={{padding:"10px 14px",background:"#fef2f2",borderRadius:t.rs,color:t.no,fontSize:13,marginBottom:12}}>{authErr}</div>}
+        <button style={{...s.btn(true),opacity:authLoading?.6:1}} onClick={handleLogin} disabled={authLoading}>{authLoading?"Signing in...":"Sign In"}</button>
+        <div style={{display:"flex",alignItems:"center",gap:12,margin:"16px 0"}}><div style={{flex:1,height:1,background:t.bdr}}/><span style={{fontSize:12,color:t.lit}}>or</span><div style={{flex:1,height:1,background:t.bdr}}/></div>
+        <button style={{...s.btn(false),display:"flex",alignItems:"center",justifyContent:"center",gap:10}} onClick={handleGoogleLogin}><GoogleIcon/> Continue with Google</button>
+        <div style={{display:"flex",justifyContent:"space-between",marginTop:14,fontSize:13}}>
+          <button style={{background:"none",border:"none",color:t.acc,cursor:"pointer",fontSize:13,padding:0}} onClick={()=>{setAuthScreen("signup");setAuthErr("");}}>Create account</button>
+          <button style={{background:"none",border:"none",color:t.mut,cursor:"pointer",fontSize:13,padding:0}} onClick={()=>{setAuthScreen("forgot");setAuthErr("");}}>Forgot password?</button>
+        </div>
+      </>}
 
-        {authScreen==="signup" && <>
-          <div style={{textAlign:"center",marginBottom:16}}><img src="/logo-full.png" alt="HomeBaked" style={{maxWidth:140,height:"auto",margin:"0 auto 4px"}}/></div>
-          <div style={{fontWeight:700,fontSize:18,marginBottom:16}}>Create Account</div>
-          <div style={{display:"flex",gap:8,marginBottom:12}}><div style={{flex:1}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>First name *</label><input style={s.inp} placeholder="Sarah" value={authFirst} onChange={e=>setAuthFirst(e.target.value)}/></div><div style={{flex:1}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Last name *</label><input style={s.inp} placeholder="Smith" value={authLast} onChange={e=>setAuthLast(e.target.value)}/></div></div>
-          <div style={{marginBottom:12}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Email *</label><input style={s.inp} type="email" placeholder="sarah@example.com" value={authEmail} onChange={e=>setAuthEmail(e.target.value)}/></div>
-          <div style={{marginBottom:12}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Phone *</label><input style={s.inp} type="tel" placeholder="0412 345 678" value={authPhone} onChange={e=>setAuthPhone(e.target.value)}/></div>
-          <div style={{marginBottom:12}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Street address *</label><input style={s.inp} placeholder="123 Baker Street" value={authAddress} onChange={e=>setAuthAddress(e.target.value)}/></div>
-          <div style={{display:"flex",gap:8,marginBottom:12}}><div style={{flex:2}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Suburb *</label><input style={s.inp} placeholder="Subiaco" value={authSuburb} onChange={e=>setAuthSuburb(e.target.value)}/></div><div style={{flex:1}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>State</label><select style={s.sel} value={authState} onChange={e=>setAuthState(e.target.value)}>{["WA","NSW","VIC","QLD","SA","TAS","NT","ACT"].map(x=><option key={x}>{x}</option>)}</select></div><div style={{flex:1}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Postcode *</label><input style={s.inp} placeholder="6008" value={authPostcode} onChange={e=>setAuthPostcode(e.target.value)}/></div></div>
-          <div style={{marginBottom:16}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Password * (min 6 chars)</label><input style={s.inp} type="password" placeholder="••••••••" value={authPass} onChange={e=>setAuthPass(e.target.value)}/></div>
-          {authErr&&<div style={{padding:"10px 14px",background:"#fef2f2",borderRadius:t.rs,color:t.no,fontSize:13,marginBottom:12}}>{authErr}</div>}
-          <button style={{...s.btn(true),opacity:authLoading?.6:1}} onClick={handleSignup} disabled={authLoading}>{authLoading?"Creating...":"Create Account"}</button>
-          <div style={{display:"flex",alignItems:"center",gap:12,margin:"16px 0"}}><div style={{flex:1,height:1,background:t.bdr}}/><span style={{fontSize:12,color:t.lit}}>or</span><div style={{flex:1,height:1,background:t.bdr}}/></div>
-          <button style={{...s.btn(false),display:"flex",alignItems:"center",justifyContent:"center",gap:10}} onClick={handleGoogleLogin}><GoogleIcon/> Continue with Google</button>
-          <button style={{background:"none",border:"none",color:t.acc,cursor:"pointer",fontSize:13,padding:0,marginTop:12}} onClick={()=>setAuthScreen("login")}>← Already have an account? Sign in</button>
-        </>}
+      {authScreen==="signup" && <>
+        <div style={{textAlign:"center",marginBottom:16}}><img src="/logo-full.png" alt="HomeBaked" style={{maxWidth:140,height:"auto",margin:"0 auto 4px"}} onError={e=>{e.target.style.display="none"}}/></div>
+        <div style={{fontWeight:700,fontSize:18,marginBottom:16}}>Create Account</div>
+        <div style={{display:"flex",gap:8,marginBottom:12}}><div style={{flex:1}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>First name *</label><input style={s.inp} placeholder="Sarah" value={authFirst} onChange={e=>setAuthFirst(e.target.value)}/></div><div style={{flex:1}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Last name *</label><input style={s.inp} placeholder="Smith" value={authLast} onChange={e=>setAuthLast(e.target.value)}/></div></div>
+        <div style={{marginBottom:12}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Email *</label><input style={s.inp} type="email" placeholder="sarah@example.com" value={authEmail} onChange={e=>setAuthEmail(e.target.value)}/></div>
+        <div style={{marginBottom:12}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Phone *</label><input style={s.inp} type="tel" placeholder="0412 345 678" value={authPhone} onChange={e=>setAuthPhone(e.target.value)}/></div>
+        <div style={{marginBottom:12}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Street address *</label><input style={s.inp} placeholder="123 Baker Street" value={authAddress} onChange={e=>setAuthAddress(e.target.value)}/></div>
+        <div style={{display:"flex",gap:8,marginBottom:12}}><div style={{flex:2}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Suburb *</label><input style={s.inp} placeholder="Subiaco" value={authSuburb} onChange={e=>setAuthSuburb(e.target.value)}/></div><div style={{flex:1}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>State</label><select style={s.sel} value={authState} onChange={e=>setAuthState(e.target.value)}>{["WA","NSW","VIC","QLD","SA","TAS","NT","ACT"].map(x=><option key={x}>{x}</option>)}</select></div><div style={{flex:1}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Postcode *</label><input style={s.inp} placeholder="6008" value={authPostcode} onChange={e=>setAuthPostcode(e.target.value)}/></div></div>
+        <div style={{marginBottom:16}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Password * (min 6 chars)</label><input style={s.inp} type="password" placeholder="••••••••" value={authPass} onChange={e=>setAuthPass(e.target.value)}/></div>
+        {authErr&&<div style={{padding:"10px 14px",background:"#fef2f2",borderRadius:t.rs,color:t.no,fontSize:13,marginBottom:12}}>{authErr}</div>}
+        <button style={{...s.btn(true),opacity:authLoading?.6:1}} onClick={handleSignup} disabled={authLoading}>{authLoading?"Creating...":"Create Account"}</button>
+        <div style={{display:"flex",alignItems:"center",gap:12,margin:"16px 0"}}><div style={{flex:1,height:1,background:t.bdr}}/><span style={{fontSize:12,color:t.lit}}>or</span><div style={{flex:1,height:1,background:t.bdr}}/></div>
+        <button style={{...s.btn(false),display:"flex",alignItems:"center",justifyContent:"center",gap:10}} onClick={handleGoogleLogin}><GoogleIcon/> Continue with Google</button>
+        <button style={{background:"none",border:"none",color:t.acc,cursor:"pointer",fontSize:13,padding:0,marginTop:12}} onClick={()=>setAuthScreen("login")}>← Already have an account? Sign in</button>
+      </>}
 
-        {authScreen==="forgot" && <>
-          <div style={{fontWeight:700,fontSize:18,marginBottom:16}}>Reset Password</div>
-          <input style={{...s.inp,marginBottom:12}} type="email" placeholder="you@example.com" value={authEmail} onChange={e=>setAuthEmail(e.target.value)}/>
-          <button style={s.btn(true)} onClick={async()=>{await supabase.auth.resetPasswordForEmail(authEmail);showToast("Check your email");}}>Send Reset Link</button>
-          <button style={{background:"none",border:"none",color:t.acc,cursor:"pointer",fontSize:13,padding:0,marginTop:12}} onClick={()=>setAuthScreen("login")}>← Back</button>
-        </>}
-      </div>
-    </div>;
-  };
+      {authScreen==="forgot" && <>
+        <div style={{fontWeight:700,fontSize:18,marginBottom:16}}>Reset Password</div>
+        <input style={{...s.inp,marginBottom:12}} type="email" placeholder="you@example.com" value={authEmail} onChange={e=>setAuthEmail(e.target.value)}/>
+        <button style={s.btn(true)} onClick={async()=>{await supabase.auth.resetPasswordForEmail(authEmail);showToast("Check your email");}}>Send Reset Link</button>
+        <button style={{background:"none",border:"none",color:t.acc,cursor:"pointer",fontSize:13,padding:0,marginTop:12}} onClick={()=>setAuthScreen("login")}>← Back</button>
+      </>}
+    </div>
+  </div> : null;
 
   // ━━━ COMPLETE PROFILE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const CompleteProfile = () => {
@@ -448,7 +445,7 @@ export default function App() {
 
 
       </div>
-      <AuthModal/>
+      {authModal}
       {toast&&<div style={{position:"fixed",top:20,left:"50%",transform:"translateX(-50%)",background:t.ok,color:"#fff",padding:"10px 24px",borderRadius:24,fontSize:13,fontWeight:600,zIndex:300}}>✓ {toast}</div>}
     </div>
   );
@@ -651,7 +648,7 @@ export default function App() {
 
   // ━━━ RENDER ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   return <div style={s.page}>
-    <Toast/><AuthModal/>
+    <Toast/>{authModal}
     <NavBar/>
     <div style={s.shell}>
       {view?.type==="seller"?<SellerPage x={view.data}/>
