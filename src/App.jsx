@@ -127,12 +127,22 @@ export default function App() {
   // Load Google Places script
   useEffect(() => {
     const key = import.meta.env.VITE_GOOGLE_PLACES_KEY;
-    if (!key || document.getElementById("google-places-script")) return;
+    if (!key || document.getElementById("google-places-script")) {
+      if (window.google?.maps?.places) setPlacesLoaded(true);
+      return;
+    }
     const script = document.createElement("script");
     script.id = "google-places-script";
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places&loading=async`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`;
     script.async = true;
-    script.onload = () => setPlacesLoaded(true);
+    script.onload = () => {
+      // Google Maps may need a moment after script loads
+      const check = () => {
+        if (window.google?.maps?.places) setPlacesLoaded(true);
+        else setTimeout(check, 100);
+      };
+      check();
+    };
     document.head.appendChild(script);
   }, []);
 
@@ -175,15 +185,18 @@ export default function App() {
   // Fallback for when Google Places key is not configured
   const handleAddressInput = (val) => {
     setAddressSearch(val);
-    if (placesLoaded && window.google?.maps?.places) {
-      clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => searchPlaces(val), 300);
-    } else {
-      // Fallback to local suburb list
-      const matches = SUBURBS.filter(s => s.name.toLowerCase().includes(val.toLowerCase())).slice(0, 6);
-      setPlaceSuggestions(matches.map(s => ({ description: `${s.name}, WA`, place_id: null, _sub: s })));
-      setShowDropdown(val.length >= 2 && matches.length > 0);
-    }
+    if (val.length < 3) { setPlaceSuggestions([]); setShowDropdown(false); return; }
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      if (window.google?.maps?.places) {
+        searchPlaces(val);
+      } else {
+        // Fallback to local suburb list
+        const matches = SUBURBS.filter(s => s.name.toLowerCase().includes(val.toLowerCase())).slice(0, 6);
+        setPlaceSuggestions(matches.map(s => ({ description: `${s.name}, WA`, place_id: null, _sub: s })));
+        setShowDropdown(matches.length > 0);
+      }
+    }, 300);
   };
 
   // App
@@ -295,6 +308,8 @@ export default function App() {
     const dist = (chosenSuburb && sub) ? Math.round(getDistance(chosenSuburb.lat,chosenSuburb.lng,sub.lat,sub.lng)*10)/10 : 999;
     return {...s, dist};
   }).filter(s => !chosenSuburb || s.dist <= 20);
+
+  const filteredSuburbs = addressSearch ? SUBURBS.filter(s => s.name.toLowerCase().includes(addressSearch.toLowerCase())).slice(0,8) : SUBURBS.slice(0,8);
 
   // ━━━ LOADING ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   if (initialLoading) return <div style={{...s.page,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{textAlign:"center"}}><div style={{fontSize:48}}>🍰</div><div style={{marginTop:12,color:t.mut}}>Loading...</div></div></div>;
