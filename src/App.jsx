@@ -296,8 +296,6 @@ export default function App() {
     return {...s, dist};
   }).filter(s => !chosenSuburb || s.dist <= 20);
 
-  const filteredSuburbs = suburbSearch ? SUBURBS.filter(s => s.name.toLowerCase().includes(suburbSearch.toLowerCase())).slice(0,8) : SUBURBS.slice(0,8);
-
   // ━━━ LOADING ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   if (initialLoading) return <div style={{...s.page,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{textAlign:"center"}}><div style={{fontSize:48}}>🍰</div><div style={{marginTop:12,color:t.mut}}>Loading...</div></div></div>;
 
