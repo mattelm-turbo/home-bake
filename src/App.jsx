@@ -284,9 +284,7 @@ export default function App() {
     <div style={{ ...s.page, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div style={{ width: "100%", maxWidth: 420 }}>
         <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <div style={{ fontSize: 48, marginBottom: 8 }}>🍰</div>
-          <div style={{ fontSize: 28, fontWeight: 800 }}><span style={{ color: t.pri }}>Home</span>Baked</div>
-          <div style={{ fontSize: 13, color: t.mut, marginTop: 4 }}>Homemade treats from local kitchens</div>
+          <img src="/logo-full.png" alt="HomeBaked" style={{ width: "100%", maxWidth: 260, height: "auto", margin: "0 auto 8px" }} />
         </div>
         <div style={{ ...s.card, padding: 24 }}>
           {authScreen === "login" && <>
@@ -375,7 +373,7 @@ export default function App() {
       <div style={{ ...s.page, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
         <div style={{ width: "100%", maxWidth: 480 }}>
           <div style={{ textAlign: "center", marginBottom: 24 }}>
-            <div style={{ fontSize: 48, marginBottom: 8 }}>👋</div>
+            <img src="/logo-full.png" alt="HomeBaked" style={{ width: "100%", maxWidth: 200, height: "auto", margin: "0 auto 12px" }} />
             <div style={{ fontSize: 22, fontWeight: 800 }}>Welcome{cpFirst ? `, ${cpFirst}` : ""}!</div>
             <div style={{ fontSize: 14, color: t.mut, marginTop: 4 }}>Just a few more details to get you set up</div>
           </div>
@@ -426,7 +424,7 @@ export default function App() {
   const NavBar = () => {
     if (bp.mobile) return <nav style={s.nav}>{navItems.map(x => <button key={x.id} style={s.navB(tab === x.id && !view)} onClick={() => { setTab(x.id); setView(null); }}><I d={x.icon} s={22} /><span>{x.label}</span></button>)}</nav>;
     return <nav style={s.nav}>
-      <div style={{ fontSize: 22, fontWeight: 800, marginRight: 16 }}><span style={{ color: t.pri }}>Home</span>Baked</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginRight: 16 }}><img src="/logo-hb.png" alt="HB" style={{ height: 30, width: "auto" }} /><span style={{ fontSize: 20, fontWeight: 800 }}><span style={{ color: t.pri }}>Home</span>Baked</span></div>
       <div style={{ flex: 1, display: "flex", gap: 4 }}>{navItems.map(x => <button key={x.id} style={s.navB(tab === x.id && !view)} onClick={() => { setTab(x.id); setView(null); }}><I d={x.icon} s={18} />{x.label}</button>)}</div>
       <button onClick={handleLogout} style={{ ...s.btnS(false), display: "flex", alignItems: "center", gap: 6, color: t.mut }}><I d={ic.logout} s={16} /> Sign out</button>
     </nav>;
@@ -441,7 +439,7 @@ export default function App() {
     });
     if (sort === "distance") list.sort((a, b) => a.dist - b.dist); else list.sort((a, b) => b.rating - a.rating);
     return <>
-      {bp.mobile && <div style={{ padding: "20px 16px 8px" }}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}><div><div style={{ fontSize: 26, fontWeight: 800 }}><span style={{ color: t.pri }}>Home</span>Baked</div><div style={{ fontSize: 12, color: t.mut, marginTop: 2 }}>📍 {loc ? "Near you" : "Perth, WA"}</div></div></div></div>}
+      {bp.mobile && <div style={{ padding: "12px 16px 8px" }}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}><div style={{ display: "flex", alignItems: "center", gap: 10 }}><img src="/logo-hb.png" alt="HB" style={{ height: 32, width: "auto" }} /><div><div style={{ fontSize: 18, fontWeight: 800 }}><span style={{ color: t.pri }}>Home</span>Baked</div><div style={{ fontSize: 11, color: t.mut }}>📍 {loc ? "Near you" : "Perth, WA"}</div></div></div></div></div>}
       {!bp.mobile && <div style={{ padding: "0 0 8px" }}><div style={{ fontSize: 13, color: t.mut }}>📍 {loc ? "Showing bakers near you" : "Perth, WA"}</div></div>}
       <div style={{ ...s.sec, marginBottom: 10 }}><div style={{ position: "relative" }}><input style={{ ...s.inp, paddingLeft: 38 }} placeholder="Search bakers or suburbs..." value={q} onChange={e => setQ(e.target.value)} /><span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: t.lit }}><I d={ic.search} s={16} /></span></div></div>
       <div style={{ padding: `0 ${s.px}px`, display: "flex", gap: 6, overflowX: "auto" }}>{["All", ...CATS].map(c => <button key={c} onClick={() => setCatF(c)} style={{ ...s.btnS(catF === c), whiteSpace: "nowrap", flexShrink: 0 }}>{c}</button>)}</div>
