@@ -475,28 +475,16 @@ export default function App() {
     </nav>;
   };
 
-  // ─── Browse Search Bar (rendered at top level to maintain focus) ─────────
+  // ─── Browse Search (native DOM to prevent focus loss) ───────────────────
   const browseSearchJSX = <div style={{padding:`0 ${s.px}px`,marginBottom:10}}><div style={{position:"relative"}}>
-    <input style={{...s.inp,paddingLeft:38}} placeholder="Search address or suburb..." defaultValue={addressSearch}
-      ref={browseSearchRef}
-      onInput={e=>{
-        const val=e.target.value;
-        clearTimeout(debounceRef.current);
-        debounceRef.current=setTimeout(()=>{
-          setAddressSearch(val);
-          if(val.length<3){setPlaceSuggestions([]);setShowDropdown(false);return;}
-          if(window.google?.maps?.places){searchPlaces(val);}
-          else{const m=SUBURBS.filter(sb=>sb.name.toLowerCase().includes(val.toLowerCase())).slice(0,6);setPlaceSuggestions(m.map(sb=>({description:`${sb.name}, WA`,place_id:null,_sub:sb})));setShowDropdown(m.length>0);}
-        },300);
-      }}
-      onFocus={()=>{if(placeSuggestions.length)setShowDropdown(true);}}
+    <input style={{...s.inp,paddingLeft:38}} placeholder="Search address or suburb..."
+      ref={el=>{if(el&&!el._setup){el._setup=true;let timer=null;el.addEventListener("input",e=>{const val=e.target.value;clearTimeout(timer);timer=setTimeout(()=>{setAddressSearch(val);if(val.length<3){setPlaceSuggestions([]);setShowDropdown(false);return;}if(window.google?.maps?.places){searchPlaces(val);}else{const m=SUBURBS.filter(sb=>sb.name.toLowerCase().includes(val.toLowerCase())).slice(0,6);setPlaceSuggestions(m.map(sb=>({description:`${sb.name}, WA`,place_id:null,_sub:sb})));setShowDropdown(m.length>0);}},300);});}}}
     />
-    <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:t.lit}}><I d={ic.loc} s={16}/></span>
-    {addressSearch&&<button onClick={()=>{setAddressSearch("");setPlaceSuggestions([]);setShowDropdown(false);if(browseSearchRef.current)browseSearchRef.current.value="";}} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:t.lit,padding:4}}><I d={ic.x} s={16}/></button>}
+    <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:t.lit,pointerEvents:"none"}}><I d={ic.loc} s={16}/></span>
     {showDropdown&&placeSuggestions.length>0&&<div style={{position:"absolute",top:"100%",left:0,right:0,marginTop:4,background:t.card,borderRadius:t.rs,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",border:`1px solid ${t.bdr}`,zIndex:10,maxHeight:300,overflowY:"auto"}}>
       {placeSuggestions.map((p,i)=><button key={p.place_id||i} onClick={()=>{
-        if(p._sub){setChosenSuburb(p._sub);setAddressSearch(p.description);setShowDropdown(false);if(browseSearchRef.current)browseSearchRef.current.value=p.description;}
-        else{selectPlace(p.place_id,p.description);if(browseSearchRef.current)browseSearchRef.current.value=p.description;}
+        if(p._sub){setChosenSuburb(p._sub);setAddressSearch(p.description);setShowDropdown(false);}
+        else{selectPlace(p.place_id,p.description);}
       }} style={{display:"flex",alignItems:"center",gap:10,width:"100%",padding:"12px 16px",border:"none",background:"none",cursor:"pointer",fontSize:14,color:t.txt,textAlign:"left",borderBottom:`1px solid ${t.bdr}`}} onMouseEnter={e=>e.currentTarget.style.background=t.bg} onMouseLeave={e=>e.currentTarget.style.background="none"}>
         <I d={ic.loc} s={16} c={t.lit}/><span style={{flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.description}</span>
       </button>)}
