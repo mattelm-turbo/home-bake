@@ -118,8 +118,73 @@ export default function App() {
 
   // Location
   const [chosenSuburb, setChosenSuburb] = useState(null);
-  const [suburbSearch, setSuburbSearch] = useState("");
-  const [showSuburbDropdown, setShowSuburbDropdown] = useState(false);
+  const [addressSearch, setAddressSearch] = useState("");
+  const [placeSuggestions, setPlaceSuggestions] = useState([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [placesLoaded, setPlacesLoaded] = useState(false);
+  const debounceRef = useState(null);
+
+  // Load Google Places script
+  useEffect(() => {
+    const key = import.meta.env.VITE_GOOGLE_PLACES_KEY;
+    if (!key || document.getElementById("google-places-script")) return;
+    const script = document.createElement("script");
+    script.id = "google-places-script";
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places&loading=async`;
+    script.async = true;
+    script.onload = () => setPlacesLoaded(true);
+    document.head.appendChild(script);
+  }, []);
+
+  const searchPlaces = (input) => {
+    if (!input || input.length < 3 || !window.google?.maps?.places) {
+      setPlaceSuggestions([]); return;
+    }
+    const svc = new window.google.maps.places.AutocompleteService();
+    svc.getPlacePredictions({
+      input,
+      componentRestrictions: { country: "au" },
+      types: ["geocode"],
+    }, (predictions, status) => {
+      if (status === "OK" && predictions) {
+        setPlaceSuggestions(predictions.slice(0, 6));
+        setShowDropdown(true);
+      } else { setPlaceSuggestions([]); }
+    });
+  };
+
+  const selectPlace = (placeId, description) => {
+    setAddressSearch(description);
+    setShowDropdown(false);
+    const geocoder = new window.google.maps.Geocoder();
+    geocoder.geocode({ placeId }, (results, status) => {
+      if (status === "OK" && results[0]) {
+        const loc = results[0].geometry.location;
+        const components = results[0].address_components;
+        const suburbComp = components.find(c => c.types.includes("locality")) || components.find(c => c.types.includes("sublocality"));
+        setChosenSuburb({
+          name: suburbComp?.long_name || description.split(",")[0],
+          lat: loc.lat(),
+          lng: loc.lng(),
+          fullAddress: description,
+        });
+      }
+    });
+  };
+
+  // Fallback for when Google Places key is not configured
+  const handleAddressInput = (val) => {
+    setAddressSearch(val);
+    if (placesLoaded && window.google?.maps?.places) {
+      clearTimeout(debounceRef[0]);
+      debounceRef[0] = setTimeout(() => searchPlaces(val), 300);
+    } else {
+      // Fallback to local suburb list
+      const matches = SUBURBS.filter(s => s.name.toLowerCase().includes(val.toLowerCase())).slice(0, 6);
+      setPlaceSuggestions(matches.map(s => ({ description: `${s.name}, WA`, place_id: null, _sub: s })));
+      setShowDropdown(val.length >= 2 && matches.length > 0);
+    }
+  };
 
   // App
   const [tab, setTab] = useState("browse");
@@ -325,18 +390,23 @@ export default function App() {
     <div style={{...s.page,display:"flex",alignItems:"center",justifyContent:"center",padding:20,minHeight:"100vh"}}>
       <div style={{width:"100%",maxWidth:500,textAlign:"center"}}>
         <img src="/logo-full.png" alt="HomeBaked" style={{maxWidth:280,width:"100%",height:"auto",margin:"0 auto 16px"}}/>
-        <div style={{fontSize:18,color:t.txt,lineHeight:1.6,marginBottom:28,padding:"0 10px",fontWeight:500,letterSpacing:"-0.01em"}}>
-          Discover homemade <span style={{color:t.pri}}>cakes</span>, <span style={{color:t.pri}}>biscuits</span>, <span style={{color:t.pri}}>preserves</span> and <span style={{color:t.pri}}>sweets</span> from bakers in your neighbourhood.
+        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&display=swap" rel="stylesheet"/>
+        <div style={{fontSize:20,color:t.txt,lineHeight:1.6,marginBottom:28,padding:"0 10px",fontWeight:500,fontFamily:"'Playfair Display',Georgia,serif",fontStyle:"italic"}}>
+          Discover homemade <span style={{color:t.pri,fontWeight:600}}>cakes</span>, <span style={{color:t.pri,fontWeight:600}}>biscuits</span>, <span style={{color:t.pri,fontWeight:600}}>preserves</span> and <span style={{color:t.pri,fontWeight:600}}>sweets</span> from bakers in your neighbourhood.
         </div>
 
         <div style={{position:"relative",maxWidth:400,margin:"0 auto"}}>
           <div style={{position:"relative"}}>
-            <input style={{...s.inp,paddingLeft:40,fontSize:16,padding:"16px 16px 16px 44px",borderRadius:14,boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}} placeholder="Enter your suburb..." value={suburbSearch} onChange={e=>{setSuburbSearch(e.target.value);setShowSuburbDropdown(true);}} onFocus={()=>setShowSuburbDropdown(true)}/>
+            <input style={{...s.inp,paddingLeft:40,fontSize:16,padding:"16px 16px 16px 44px",borderRadius:14,boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}} placeholder="Enter your address or suburb..." value={addressSearch} onChange={e=>handleAddressInput(e.target.value)} onFocus={()=>{if(placeSuggestions.length)setShowDropdown(true);}}/>
             <span style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",color:t.acc}}><I d={ic.loc} s={20}/></span>
+            {addressSearch&&<button onClick={()=>{setAddressSearch("");setPlaceSuggestions([]);setShowDropdown(false);}} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:t.lit,padding:4}}><I d={ic.x} s={16}/></button>}
           </div>
-          {showSuburbDropdown && filteredSuburbs.length>0 && <div style={{position:"absolute",top:"100%",left:0,right:0,marginTop:4,background:t.card,borderRadius:t.rs,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",border:`1px solid ${t.bdr}`,zIndex:10,maxHeight:260,overflowY:"auto"}}>
-            {filteredSuburbs.map(sub=><button key={sub.name} onClick={()=>{setChosenSuburb(sub);setSuburbSearch(sub.name);setShowSuburbDropdown(false);}} style={{display:"flex",alignItems:"center",gap:10,width:"100%",padding:"12px 16px",border:"none",background:"none",cursor:"pointer",fontSize:14,color:t.txt,textAlign:"left",borderBottom:`1px solid ${t.bdr}`}} onMouseEnter={e=>e.currentTarget.style.background=t.bg} onMouseLeave={e=>e.currentTarget.style.background="none"}>
-              <I d={ic.loc} s={16} c={t.lit}/>{sub.name}, WA
+          {showDropdown&&placeSuggestions.length>0&&<div style={{position:"absolute",top:"100%",left:0,right:0,marginTop:4,background:t.card,borderRadius:t.rs,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",border:`1px solid ${t.bdr}`,zIndex:10,maxHeight:300,overflowY:"auto"}}>
+            {placeSuggestions.map((p,i)=><button key={p.place_id||i} onClick={()=>{
+              if(p._sub) { setChosenSuburb(p._sub); setAddressSearch(p.description); setShowDropdown(false); }
+              else { selectPlace(p.place_id,p.description); }
+            }} style={{display:"flex",alignItems:"center",gap:10,width:"100%",padding:"12px 16px",border:"none",background:"none",cursor:"pointer",fontSize:14,color:t.txt,textAlign:"left",borderBottom:`1px solid ${t.bdr}`}} onMouseEnter={e=>e.currentTarget.style.background=t.bg} onMouseLeave={e=>e.currentTarget.style.background="none"}>
+              <I d={ic.loc} s={16} c={t.lit}/><span style={{flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.description}</span>
             </button>)}
           </div>}
         </div>
@@ -388,7 +458,7 @@ export default function App() {
           :<button onClick={()=>setShowAuth(true)} style={{...s.btnS(true),fontSize:11}}>Sign in</button>}
       </div></div>}
       {!bp.mobile&&<div style={{padding:"0 0 8px",display:"flex",justifyContent:"space-between",alignItems:"center"}}><div style={{fontSize:13,color:t.mut}}>📍 Showing bakers within 20km of {chosenSuburb?.name||"Perth"}</div>
-        <button onClick={()=>{setChosenSuburb(null);setSuburbSearch("");}} style={{...s.btnS(false),fontSize:12}}>Change location</button>
+        <button onClick={()=>{setChosenSuburb(null);setAddressSearch("");}} style={{...s.btnS(false),fontSize:12}}>Change location</button>
       </div>}
 
       <div style={{...s.sec,marginBottom:10}}><div style={{position:"relative"}}><input style={{...s.inp,paddingLeft:38}} placeholder="Search bakers or suburbs..." value={q} onChange={e=>setQ(e.target.value)}/><span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:t.lit}}><I d={ic.search} s={16}/></span></div></div>
