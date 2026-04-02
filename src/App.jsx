@@ -269,15 +269,19 @@ export default function App(){
     {showDropdown&&placeSuggestions.length>0&&<div style={{position:"absolute",top:"100%",left:0,right:0,marginTop:4,background:t.card,borderRadius:t.rs,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",border:`1px solid ${t.bdr}`,zIndex:10,maxHeight:300,overflowY:"auto"}}>{placeSuggestions.map((p,i)=><button key={p.place_id||i} onClick={()=>{if(p._sub){setChosenSuburb(p._sub);setShowDropdown(false);}else selectPlace(p.place_id,p.description);}} style={{display:"flex",alignItems:"center",gap:10,width:"100%",padding:"12px 16px",border:"none",background:"none",cursor:"pointer",fontSize:14,color:t.txt,textAlign:"left",borderBottom:`1px solid ${t.bdr}`}} onMouseEnter={e=>e.currentTarget.style.background=t.bg} onMouseLeave={e=>e.currentTarget.style.background="none"}><I d={ic.loc} s={16} c={t.lit}/><span style={{flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.description}</span></button>)}</div>}
   </div></div>;
 
+  // ─── Browse Header (rendered at top level like search bar) ──────────────
+  const browseHeader=<>
+    {bp.mobile&&<div style={{padding:"12px 16px 8px"}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}><div style={{display:"flex",alignItems:"center",gap:10}}><img src="/logo-hb.png" alt="HB" style={{height:32,width:"auto"}} onError={e=>{e.target.style.display="none"}}/><div><div style={{fontSize:18,fontWeight:800}}><span style={{color:t.pri}}>Home</span>Baked</div><button onClick={()=>{setChosenSuburb(null);setAddressSearch("");}} style={{fontSize:11,color:t.acc,background:"none",border:"none",cursor:"pointer",padding:0,display:"flex",alignItems:"center",gap:4}}><I d={ic.loc} s={12} c={t.acc}/> {chosenSuburb?.name||"Perth"} · 20km <span style={{color:t.lit,textDecoration:"underline",marginLeft:2}}>Change</span></button></div></div>
+      {session?<div style={{width:32,height:32,borderRadius:10,background:t.priL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,cursor:"pointer"}} onClick={()=>setTab("account")}>{profile?.first_name?.[0]||"?"}</div>:<button onClick={()=>setShowAuth(true)} style={{...s.btnS(true),fontSize:11}}>Sign in</button>}
+    </div></div>}
+    {!bp.mobile&&<div style={{padding:"0 0 8px",display:"flex",justifyContent:"space-between",alignItems:"center"}}><div style={{fontSize:13,color:t.mut,display:"flex",alignItems:"center",gap:6}}><I d={ic.loc} s={14} c={t.acc}/> Showing bakers within 20km of <strong style={{color:t.txt}}>{chosenSuburb?.fullAddress||chosenSuburb?.name||"Perth"}</strong></div><button onClick={()=>{setChosenSuburb(null);setAddressSearch("");}} style={{...s.btnS(false),fontSize:12}}>Change location</button></div>}
+  </>;
+
   // ─── Browse ───────────────────────────────────────────────────────────────
   const Browse=()=>{
     let list=sellersWithDist.filter(x=>{const mc=catF==="All"||x.menu.some(m=>m.category===catF);return mc;});
     if(sort==="distance")list.sort((a,b)=>a.dist-b.dist);else list.sort((a,b)=>b.rating-a.rating);
     return<>
-      {bp.mobile&&<div style={{padding:"12px 16px 8px"}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}><div style={{display:"flex",alignItems:"center",gap:10}}><img src="/logo-hb.png" alt="HB" style={{height:32,width:"auto"}} onError={e=>{e.target.style.display="none"}}/><div><div style={{fontSize:18,fontWeight:800}}><span style={{color:t.pri}}>Home</span>Baked</div><button onClick={()=>{setChosenSuburb(null);setAddressSearch("");}} style={{fontSize:11,color:t.acc,background:"none",border:"none",cursor:"pointer",padding:0,display:"flex",alignItems:"center",gap:4}}><I d={ic.loc} s={12} c={t.acc}/> {chosenSuburb?.name||"Perth"} · 20km <span style={{color:t.lit,textDecoration:"underline",marginLeft:2}}>Change</span></button></div></div>
-        {session?<div style={{width:32,height:32,borderRadius:10,background:t.priL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,cursor:"pointer"}} onClick={()=>setTab("account")}>{profile?.first_name?.[0]||"?"}</div>:<button onClick={()=>setShowAuth(true)} style={{...s.btnS(true),fontSize:11}}>Sign in</button>}
-      </div></div>}
-      {!bp.mobile&&<div style={{padding:"0 0 8px",display:"flex",justifyContent:"space-between",alignItems:"center"}}><div style={{fontSize:13,color:t.mut,display:"flex",alignItems:"center",gap:6}}><I d={ic.loc} s={14} c={t.acc}/> Showing bakers within 20km of <strong style={{color:t.txt}}>{chosenSuburb?.fullAddress||chosenSuburb?.name||"Perth"}</strong></div><button onClick={()=>{setChosenSuburb(null);setAddressSearch("");}} style={{...s.btnS(false),fontSize:12}}>Change location</button></div>}
       <div style={{padding:`0 ${s.px}px`,display:"flex",gap:6,overflowX:"auto"}}>{["All",...CATS].map(c=><button key={c} onClick={()=>setCatF(c)} style={{...s.btnS(catF===c),whiteSpace:"nowrap",flexShrink:0}}>{c}</button>)}</div>
       <div style={{padding:`8px ${s.px}px 4px`,display:"flex",gap:6,alignItems:"center"}}><span style={{fontSize:11,color:t.mut}}>Sort:</span>{[["distance","Nearest"],["rating","Top Rated"]].map(([k,l])=><button key={k} onClick={()=>setSort(k)} style={{...s.btnS(sort===k),padding:"3px 10px",fontSize:11}}>{l}</button>)}</div>
       <div style={{...s.sec,marginTop:8}}>
@@ -374,9 +378,8 @@ export default function App(){
     {ToastEl}{authModal}
     <NavBar/>
     <div style={s.shell}>
-      {tab==="browse"&&!view&&browseSearchBar}
       {view?.type==="seller"?<SellerPage x={view.data}/>
-        :tab==="browse"?<Browse/>
+        :tab==="browse"?<>{browseHeader}{browseSearchBar}<Browse/></>
         :tab==="cart"?<Cart/>
         :tab==="account"?<Account/>
         :<Sell/>}
