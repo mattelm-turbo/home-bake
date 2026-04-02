@@ -146,40 +146,53 @@ export default function App() {
     document.head.appendChild(script);
   }, []);
 
-  const searchPlaces = (input) => {
+  const searchPlaces = async (input) => {
     if (!input || input.length < 3 || !window.google?.maps?.places) {
       setPlaceSuggestions([]); return;
     }
-    const svc = new window.google.maps.places.AutocompleteService();
-    svc.getPlacePredictions({
-      input,
-      componentRestrictions: { country: "au" },
-      types: ["geocode"],
-    }, (predictions, status) => {
-      if (status === "OK" && predictions) {
-        setPlaceSuggestions(predictions.slice(0, 6));
+    try {
+      const { suggestions } = await google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions({
+        input,
+        includedRegionCodes: ["au"],
+        includedPrimaryTypes: ["geocode"],
+      });
+      if (suggestions?.length) {
+        setPlaceSuggestions(suggestions.map(s => ({
+          description: s.placePrediction.text.text,
+          place_id: s.placePrediction.placeId,
+        })));
         setShowDropdown(true);
       } else { setPlaceSuggestions([]); }
-    });
+    } catch (e) {
+      console.error("Places error:", e);
+      // Fallback to local suburbs
+      const mtch = SUBURBS.filter(sb => sb.name.toLowerCase().includes(input.toLowerCase())).slice(0, 6);
+      setPlaceSuggestions(mtch.map(sb => ({ description: `${sb.name}, WA`, place_id: null, _sub: sb })));
+      setShowDropdown(mtch.length > 0);
+    }
   };
 
-  const selectPlace = (placeId, description) => {
+  const selectPlace = async (placeId, description) => {
     setAddressSearch(description);
     setShowDropdown(false);
-    const geocoder = new window.google.maps.Geocoder();
-    geocoder.geocode({ placeId }, (results, status) => {
-      if (status === "OK" && results[0]) {
-        const loc = results[0].geometry.location;
-        const components = results[0].address_components;
-        const suburbComp = components.find(c => c.types.includes("locality")) || components.find(c => c.types.includes("sublocality"));
-        setChosenSuburb({
-          name: suburbComp?.long_name || description.split(",")[0],
-          lat: loc.lat(),
-          lng: loc.lng(),
-          fullAddress: description,
-        });
-      }
-    });
+    try {
+      const { Place } = google.maps.places;
+      const place = new Place({ id: placeId });
+      await place.fetchFields({ fields: ["location", "addressComponents"] });
+      const loc = place.location;
+      const components = place.addressComponents || [];
+      const suburbComp = components.find(c => c.types.includes("locality")) || components.find(c => c.types.includes("sublocality"));
+      setChosenSuburb({
+        name: suburbComp?.longText || description.split(",")[0],
+        lat: loc.lat(),
+        lng: loc.lng(),
+        fullAddress: description,
+      });
+    } catch (e) {
+      console.error("Place details error:", e);
+      // Fallback: use description as suburb name
+      setChosenSuburb({ name: description.split(",")[0], lat: -31.9505, lng: 115.8605, fullAddress: description });
+    }
   };
 
   // Fallback for when Google Places key is not configured
@@ -309,7 +322,6 @@ export default function App() {
     return {...s, dist};
   }).filter(s => !chosenSuburb || s.dist <= 20);
 
-  const filteredSuburbs = addressSearch ? SUBURBS.filter(s => s.name.toLowerCase().includes(addressSearch.toLowerCase())).slice(0,8) : SUBURBS.slice(0,8);
 
   // ━━━ LOADING ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   if (initialLoading) return <div style={{...s.page,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{textAlign:"center"}}><div style={{fontSize:48}}>🍰</div><div style={{marginTop:12,color:t.mut}}>Loading...</div></div></div>;
