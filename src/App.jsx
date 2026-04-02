@@ -14,6 +14,7 @@ const ic = {
   zap:"M13 2L3 14h9l-1 10 10-12h-9l1-10z",
   shield:"M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z",
   trash:"M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2",
+  edit:"M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z",
   logout:"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9",
   x:"M18 6L6 18M6 6l12 12",
 };
@@ -241,7 +242,7 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  useEffect(() => { if (session?.user) { loadProfile(session.user.id); } else { setProfile(null); } loadSellers(); }, [session]);
+  useEffect(() => { if (session?.user) { loadProfile(session.user.id); if (!chosenSuburb) { setChosenSuburb({ name: "Perth", lat: -31.9505, lng: 115.8605, fullAddress: "Perth, WA" }); } } else { setProfile(null); } loadSellers(); }, [session]);
 
   // ─── Database ─────────────────────────────────────────────────────────────
   async function loadProfile(userId) {
@@ -440,7 +441,10 @@ export default function App() {
         <div style={{marginTop:24,display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
           {!session && <><button style={{...s.btnS(false),fontSize:13}} onClick={()=>setShowAuth(true)}>Sign in</button>
           <button style={{...s.btnS(true),fontSize:13}} onClick={()=>{setAuthScreen("signup");setShowAuth(true);}}>Create account</button></>}
-          {session && <div style={{fontSize:13,color:t.ok,fontWeight:600}}>✓ Signed in as {session.user.email}</div>}
+          {session && <>
+            <button style={{...s.btn(true),maxWidth:280}} onClick={()=>{setChosenSuburb({name:"Perth",lat:-31.9505,lng:115.8605,fullAddress:"Perth, WA"});setTab("sell");}}>🍰 Go to your kitchen</button>
+            <button style={{...s.btnS(false),fontSize:13,marginTop:4}} onClick={handleLogout}>Sign out</button>
+          </>}
         </div>
 
 
@@ -519,7 +523,7 @@ export default function App() {
             <div key={x.id} style={{...s.card,cursor:"pointer"}} onClick={()=>go({type:"seller",data:x})} onMouseEnter={e=>{e.currentTarget.style.boxShadow=t.shLg}} onMouseLeave={e=>{e.currentTarget.style.boxShadow=t.sh}}>
               <div style={{padding:16}}>
                 <div style={{display:"flex",gap:12,alignItems:"center"}}>
-                  <div style={{width:52,height:52,borderRadius:14,background:t.priL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,flexShrink:0}}>{x.avatar_emoji||"🍰"}</div>
+                  <div style={{width:52,height:52,borderRadius:14,background:t.priL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,flexShrink:0,overflow:"hidden"}}>{x.shop_image_url?<img src={x.shop_image_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:(x.avatar_emoji||"🍰")}</div>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{display:"flex",alignItems:"center",gap:6}}><span style={{fontWeight:700,fontSize:15}}>{x.name}</span>{x.verified&&<span style={{fontSize:11,color:t.ok}}>✓</span>}</div>
                     <div style={{fontSize:12,color:t.mut,marginTop:1}}>{x.suburb} · {x.dist<999?`${x.dist}km`:""}</div>
@@ -546,7 +550,7 @@ export default function App() {
       <div style={s.sec}>
         <div style={{...s.card,padding:bp.mobile?18:24,marginBottom:16}}>
           <div style={{display:"flex",gap:14,alignItems:"center",marginBottom:10}}>
-            <div style={{width:bp.mobile?60:72,height:bp.mobile?60:72,borderRadius:18,background:t.priL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:bp.mobile?30:36}}>{x.avatar_emoji||"🍰"}</div>
+            <div style={{width:bp.mobile?60:72,height:bp.mobile?60:72,borderRadius:18,background:t.priL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:bp.mobile?30:36,overflow:"hidden"}}>{x.shop_image_url?<img src={x.shop_image_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:(x.avatar_emoji||"🍰")}</div>
             <div><div style={{fontWeight:700,fontSize:bp.mobile?17:20}}>{x.name}</div><div style={{fontSize:13,color:t.mut}}>{x.suburb}, {x.state}{x.dist<999?` · ${x.dist}km away`:""}</div><Stars r={x.rating}/> <span style={{fontSize:11,color:t.lit}}>({x.reviews} reviews)</span></div>
           </div>
           <p style={{fontSize:14,color:t.mut,lineHeight:1.6,margin:"0 0 10px"}}>{x.bio}</p>
@@ -621,8 +625,137 @@ export default function App() {
 
     if(addingItem) return <><div style={s.hdr}><button style={s.bck} onClick={()=>setAddingItem(false)}><I d={ic.back}/></button><span style={s.hdrT}>Add Item</span></div><div style={{...s.sec,...formW}}><MenuItemForm mf={mf} setMf={setMf} s={s}/><button style={{...s.btn(true),marginTop:8,opacity:(mf.name&&mf.price&&!saving)?1:.5}} disabled={!mf.name||!mf.price||saving} onClick={async()=>{setSaving(true);await addMenuItem(mf);setMf({name:"",cat:"Cakes",price:"",desc:"",allergens:[],emoji:"🍰"});setAddingItem(false);setSaving(false);showToast("Item added!");loadMyMenu().then(setMyMenu);}}>{saving?"Saving...":"Add to Menu"}</button></div></>;
 
+    // Dashboard
+    const [editingStore, setEditingStore] = useState(false);
+    const [storeForm, setStoreForm] = useState(null);
+    const [uploadingPhoto, setUploadingPhoto] = useState(false);
+    const [photoPreview, setPhotoPreview] = useState(null);
+    const fileInputRef = useRef(null);
+
+    const handlePhotoUpload = async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) { showToast("Image must be under 2MB"); return; }
+      setUploadingPhoto(true);
+      // Preview immediately
+      const reader = new FileReader();
+      reader.onload = (ev) => setPhotoPreview(ev.target.result);
+      reader.readAsDataURL(file);
+      // Upload to Supabase Storage
+      const ext = file.name.split(".").pop();
+      const path = `shop-icons/${session.user.id}.${ext}`;
+      const { error } = await supabase.storage.from("shop-images").upload(path, file, { upsert: true });
+      if (error) {
+        // Try creating the bucket if it doesn't exist
+        await supabase.storage.createBucket("shop-images", { public: true });
+        await supabase.storage.from("shop-images").upload(path, file, { upsert: true });
+      }
+      const { data: urlData } = supabase.storage.from("shop-images").getPublicUrl(path);
+      if (urlData?.publicUrl) {
+        await supabase.from("profiles").update({ shop_image_url: urlData.publicUrl + "?t=" + Date.now() }).eq("id", session.user.id);
+        setStoreForm(p => ({ ...p, shop_image_url: urlData.publicUrl }));
+      }
+      setUploadingPhoto(false);
+      showToast("Photo uploaded!");
+    };
+
+    if (editingStore) {
+      const sf = storeForm;
+      return <>
+        <div style={s.hdr}><button style={s.bck} onClick={() => setEditingStore(false)}><I d={ic.back}/></button><span style={s.hdrT}>Customize Your Kitchen</span></div>
+        <div style={{...s.sec,...formW}}>
+          {/* Shop Icon / Photo */}
+          <div style={{textAlign:"center",marginBottom:20}}>
+            <div style={{fontSize:14,fontWeight:600,marginBottom:8}}>Shop photo</div>
+            <div onClick={() => fileInputRef.current?.click()} style={{width:120,height:120,borderRadius:24,margin:"0 auto",cursor:"pointer",overflow:"hidden",border:`2px dashed ${t.bdr}`,display:"flex",alignItems:"center",justifyContent:"center",background:t.bg,position:"relative"}}>
+              {(photoPreview || sf.shop_image_url) ? <img src={photoPreview || sf.shop_image_url} alt="Shop" style={{width:"100%",height:"100%",objectFit:"cover"}}/> : <div style={{textAlign:"center",color:t.mut}}><I d={ic.cam} s={28} c={t.lit}/><div style={{fontSize:11,marginTop:4}}>Tap to upload</div></div>}
+              {uploadingPhoto && <div style={{position:"absolute",inset:0,background:"rgba(255,255,255,0.8)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:t.pri,fontWeight:600}}>Uploading...</div>}
+            </div>
+            <input ref={fileInputRef} type="file" accept="image/*" style={{display:"none"}} onChange={handlePhotoUpload}/>
+            <div style={{fontSize:11,color:t.mut,marginTop:6}}>Square image works best · Max 2MB</div>
+          </div>
+
+          {/* Display Name */}
+          <div style={{marginBottom:14}}>
+            <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:4}}>Kitchen name *</label>
+            <input style={s.inp} placeholder="e.g. Sarah's Sweet Kitchen" value={sf.name} onChange={e => setStoreForm(p => ({...p, name: e.target.value}))}/>
+            <div style={{fontSize:11,color:t.mut,marginTop:3}}>This is what buyers see as your store name</div>
+          </div>
+
+          {/* Handle */}
+          <div style={{marginBottom:14}}>
+            <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:4}}>Handle</label>
+            <input style={{...s.inp,color:t.mut}} value={"@" + (sf.name||"").toLowerCase().replace(/[^a-z0-9]/g,"")} disabled/>
+          </div>
+
+          {/* About / Bio */}
+          <div style={{marginBottom:14}}>
+            <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:4}}>About your kitchen</label>
+            <textarea style={{...s.ta,minHeight:120}} placeholder="Tell your customers about yourself! What do you love baking? What makes your kitchen special? Any certifications or awards?" value={sf.bio} onChange={e => setStoreForm(p => ({...p, bio: e.target.value}))}/>
+            <div style={{fontSize:11,color:t.mut,marginTop:3}}>{(sf.bio||"").length}/500 characters</div>
+          </div>
+
+          {/* Suburb */}
+          <div style={{marginBottom:14}}>
+            <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:4}}>Suburb *</label>
+            <div style={{display:"flex",gap:8}}>
+              <input style={{...s.inp,flex:1}} placeholder="Subiaco" value={sf.suburb} onChange={e => setStoreForm(p => ({...p, suburb: e.target.value}))}/>
+              <select style={{...s.sel,width:80}} value={sf.state} onChange={e => setStoreForm(p => ({...p, state: e.target.value}))}>{["WA","NSW","VIC","QLD","SA","TAS","NT","ACT"].map(x => <option key={x}>{x}</option>)}</select>
+            </div>
+          </div>
+
+          {/* Emoji picker */}
+          <div style={{marginBottom:14}}>
+            <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:4}}>Store emoji (shown if no photo)</label>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{EMOJIS.map(e => <button key={e} onClick={() => setStoreForm(p => ({...p, avatar_emoji: e}))} style={{width:40,height:40,borderRadius:10,border:sf.avatar_emoji===e?`2px solid ${t.pri}`:`1.5px solid ${t.bdr}`,background:sf.avatar_emoji===e?t.priL:t.card,fontSize:20,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>{e}</button>)}</div>
+          </div>
+
+          {/* Delivery options */}
+          <div style={{marginBottom:20}}>
+            <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:8}}>Fulfilment options</label>
+            <div style={{display:"flex",gap:16}}>
+              <label style={{fontSize:14,display:"flex",gap:8,alignItems:"center",cursor:"pointer",padding:"10px 16px",borderRadius:t.rs,background:sf.pickup?t.okBg:t.bg,border:`1.5px solid ${sf.pickup?t.ok:t.bdr}`}}>
+                <input type="checkbox" checked={sf.pickup} onChange={e => setStoreForm(p => ({...p, pickup: e.target.checked}))}/> 📦 Pickup
+              </label>
+              <label style={{fontSize:14,display:"flex",gap:8,alignItems:"center",cursor:"pointer",padding:"10px 16px",borderRadius:t.rs,background:sf.delivery?"#dbeafe":t.bg,border:`1.5px solid ${sf.delivery?"#3b82f6":t.bdr}`}}>
+                <input type="checkbox" checked={sf.delivery} onChange={e => setStoreForm(p => ({...p, delivery: e.target.checked}))}/> 🚗 Delivery
+              </label>
+            </div>
+          </div>
+
+          {/* Save */}
+          <button style={{...s.btn(true),marginBottom:8}} onClick={async () => {
+            if (!sf.name || !sf.suburb) { showToast("Name and suburb are required"); return; }
+            setSaving(true);
+            const handle = "@" + sf.name.toLowerCase().replace(/[^a-z0-9]/g,"");
+            const { error } = await supabase.from("profiles").update({
+              name: sf.name, handle, bio: (sf.bio||"").slice(0,500), suburb: sf.suburb, state: sf.state,
+              avatar_emoji: sf.avatar_emoji, delivery: sf.delivery, pickup: sf.pickup,
+            }).eq("id", session.user.id);
+            if (error) { showToast("Error saving"); setSaving(false); return; }
+            await loadProfile(session.user.id);
+            await loadSellers();
+            setSaving(false);
+            setEditingStore(false);
+            showToast("Kitchen updated! ✨");
+          }}>{saving ? "Saving..." : "Save Changes"}</button>
+          <button style={{...s.btn(false)}} onClick={() => setEditingStore(false)}>Cancel</button>
+        </div>
+      </>;
+    }
+
     return <><div style={s.hdr}><span style={s.hdrT}>Your Kitchen</span></div><div style={{...s.sec,...formW}}>
-      <div style={{...s.card,padding:16,marginBottom:12}}><div style={{display:"flex",gap:12,alignItems:"center"}}><div style={{width:52,height:52,borderRadius:14,background:t.priL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26}}>{profile.avatar_emoji||"🍰"}</div><div style={{flex:1}}><div style={{fontWeight:700,fontSize:16}}>{profile.name}</div><div style={{fontSize:12,color:t.mut}}>{profile.handle} · {profile.suburb}, {profile.state}</div></div></div>{profile.bio&&<p style={{fontSize:13,color:t.mut,margin:"10px 0 0",lineHeight:1.5}}>{profile.bio}</p>}<div style={{display:"flex",gap:5,marginTop:8}}>{profile.pickup&&<span style={s.badge(t.okBg,"#166534")}>Pickup</span>}{profile.delivery&&<span style={s.badge("#dbeafe","#1e40af")}>Delivery</span>}{!profile.verified&&<span style={s.badge("#fef3c7","#92400e")}>⏳ Pending</span>}</div></div>
+      <div style={{...s.card,padding:16,marginBottom:12}}>
+        <div style={{display:"flex",gap:12,alignItems:"center"}}>
+          <div style={{width:56,height:56,borderRadius:16,background:t.priL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,flexShrink:0,overflow:"hidden"}}>
+            {profile.shop_image_url ? <img src={profile.shop_image_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/> : (profile.avatar_emoji||"🍰")}
+          </div>
+          <div style={{flex:1}}><div style={{fontWeight:700,fontSize:16}}>{profile.name}</div><div style={{fontSize:12,color:t.mut}}>{profile.handle} · {profile.suburb}, {profile.state}</div></div>
+          <button onClick={() => { setStoreForm({name:profile.name,bio:profile.bio||"",suburb:profile.suburb,state:profile.state,avatar_emoji:profile.avatar_emoji||"🍰",delivery:profile.delivery,pickup:profile.pickup,shop_image_url:profile.shop_image_url||""}); setPhotoPreview(null); setEditingStore(true); }} style={{...s.btnS(false),display:"flex",alignItems:"center",gap:4}}><I d={ic.edit} s={14}/> Edit</button>
+        </div>
+        {profile.bio&&<p style={{fontSize:13,color:t.mut,margin:"10px 0 0",lineHeight:1.5}}>{profile.bio}</p>}
+        <div style={{display:"flex",gap:5,marginTop:8}}>{profile.pickup&&<span style={s.badge(t.okBg,"#166534")}>Pickup</span>}{profile.delivery&&<span style={s.badge("#dbeafe","#1e40af")}>Delivery</span>}{!profile.verified&&<span style={s.badge("#fef3c7","#92400e")}>⏳ Pending</span>}</div>
+      </div>
       {!profile.verified&&<div style={{...s.tip,background:"#fefce8",color:"#854d0e",marginBottom:12}}><strong>Reminder:</strong> Notify your council for the ✓ badge.<div style={{marginTop:8}}><button onClick={async()=>{await supabase.from("profiles").update({verified:true}).eq("id",session.user.id);loadProfile(session.user.id);}} style={{...s.btnS(true),fontSize:11}}>I've notified my council ✓</button></div></div>}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",margin:"16px 0 10px"}}><span style={{fontWeight:700,fontSize:15}}>Menu ({myMenu.length})</span><button style={s.btnS(true)} onClick={()=>{setMf({name:"",cat:"Cakes",price:"",desc:"",allergens:[],emoji:"🍰"});setAddingItem(true);}}>+ Add Item</button></div>
       {myMenu.map(item=><div key={item.id} style={{...s.card,padding:12,marginBottom:8}}><div style={{display:"flex",gap:10,alignItems:"center"}}><div style={{width:44,height:44,borderRadius:10,background:"#fef3c7",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{item.emoji}</div><div style={{flex:1}}><div style={{fontWeight:600,fontSize:13}}>{item.name}</div><div style={{fontSize:11,color:t.mut}}>{item.category} · ${Number(item.price).toFixed(2)}</div></div><button onClick={async()=>{await removeMenuItem(item.id);loadMyMenu().then(setMyMenu);}} style={{background:"none",border:"none",cursor:"pointer",color:t.no,padding:4}}><I d={ic.trash} s={16}/></button></div></div>)}
