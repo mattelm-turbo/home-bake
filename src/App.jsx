@@ -21,28 +21,7 @@ const CATS = ["Cakes","Biscuits","Preserves","Slices","Pastries","Sweets"];
 const EMOJIS = ["🍰","🧁","🍪","🫙","🍫","🥐","🍓","🍋","🍊","🎂","🍯","🥜"];
 const ALLERGENS = ["Gluten","Eggs","Dairy","Tree Nuts","Peanuts","Soy","Sesame"];
 
-const SUBURBS = [
-  {name:"Subiaco",lat:-31.944,lng:115.827},{name:"Fremantle",lat:-32.057,lng:115.744},
-  {name:"Leederville",lat:-31.937,lng:115.841},{name:"Perth CBD",lat:-31.951,lng:115.861},
-  {name:"Nedlands",lat:-31.98,lng:115.81},{name:"Claremont",lat:-31.98,lng:115.78},
-  {name:"Cottesloe",lat:-31.994,lng:115.756},{name:"Mt Lawley",lat:-31.93,lng:115.87},
-  {name:"Victoria Park",lat:-31.974,lng:115.895},{name:"South Perth",lat:-31.97,lng:115.86},
-  {name:"Kalamunda",lat:-31.974,lng:116.059},{name:"Midland",lat:-31.886,lng:116.011},
-  {name:"Joondalup",lat:-31.745,lng:115.766},{name:"Rockingham",lat:-32.277,lng:115.729},
-  {name:"Armadale",lat:-32.153,lng:116.015},{name:"Cannington",lat:-32.013,lng:115.934},
-  {name:"Morley",lat:-31.893,lng:115.905},{name:"Scarborough",lat:-31.895,lng:115.76},
-  {name:"Innaloo",lat:-31.893,lng:115.796},{name:"Osborne Park",lat:-31.9,lng:115.81},
-  {name:"Bayswater",lat:-31.92,lng:115.92},{name:"Applecross",lat:-32.013,lng:115.835},
-  {name:"Como",lat:-31.991,lng:115.861},{name:"Manning",lat:-32.008,lng:115.867},
-  {name:"Rivervale",lat:-31.96,lng:115.91},{name:"Belmont",lat:-31.95,lng:115.935},
-  {name:"Maylands",lat:-31.934,lng:115.894},{name:"Inglewood",lat:-31.918,lng:115.881},
-  {name:"Dianella",lat:-31.887,lng:115.87},{name:"Stirling",lat:-31.868,lng:115.81},
-  {name:"Wembley",lat:-31.934,lng:115.805},{name:"Floreat",lat:-31.935,lng:115.788},
-  {name:"City Beach",lat:-31.935,lng:115.758},{name:"Mt Hawthorn",lat:-31.92,lng:115.838},
-  {name:"North Perth",lat:-31.925,lng:115.855},{name:"Highgate",lat:-31.937,lng:115.868},
-  {name:"East Perth",lat:-31.956,lng:115.872},{name:"West Perth",lat:-31.949,lng:115.846},
-  {name:"Northbridge",lat:-31.944,lng:115.858},{name:"West Leederville",lat:-31.941,lng:115.828},
-].sort((a,b)=>a.name.localeCompare(b.name));
+const SUBURBS = []; // No longer used — all geocoding via Google Places
 
 function getDistance(lat1,lng1,lat2,lng2){const R=6371,dLat=(lat2-lat1)*Math.PI/180,dLng=(lng2-lng1)*Math.PI/180;const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
 
@@ -120,14 +99,26 @@ export default function App(){
   // ─── DB Functions ─────────────────────────────────────────────────────────
   async function loadProfile(uid){const{data}=await supabase.from("profiles").select("*").eq("id",uid).single();if(data){setProfile(data);setProfileIncomplete(!data.phone||!data.address||!data.suburb||!data.first_name);}else{setProfile(null);setProfileIncomplete(false);}}
   async function loadSellers(){const{data}=await supabase.from("profiles").select(`*, menu_items(*)`).neq("suburb","").order("created_at",{ascending:false});if(data)setSellers(data.filter(p=>p.menu_items?.length>0).map(p=>({...p,menu:p.menu_items.filter(m=>m.active),rating:4.5+Math.round(Math.random()*5)/10,reviews:Math.floor(Math.random()*50)+5})));}
-  async function saveProfile(d){const h="@"+d.name.toLowerCase().replace(/[^a-z0-9]/g,"");const{error}=await supabase.from("profiles").upsert({id:session.user.id,name:d.name,handle:h,suburb:d.suburb,state:d.state,bio:d.bio,avatar_emoji:d.avatar_emoji||"🍰",delivery:d.delivery,pickup:d.pickup});if(error){showToast("Error saving");return false;}await loadProfile(session.user.id);return true;}
+  async function geocodeSuburb(suburb,state){
+    if(!window.google?.maps)return null;
+    try{
+      const geocoder=new google.maps.Geocoder();
+      const result=await new Promise((resolve,reject)=>{geocoder.geocode({address:`${suburb}, ${state}, Australia`},(results,status)=>{if(status==="OK"&&results[0])resolve(results[0]);else reject(status);});});
+      return{lat:result.geometry.location.lat(),lng:result.geometry.location.lng()};
+    }catch(e){return null;}
+  }
+
+  async function saveProfile(d){const h="@"+d.name.toLowerCase().replace(/[^a-z0-9]/g,"");
+    const coords=await geocodeSuburb(d.suburb,d.state);
+    const{error}=await supabase.from("profiles").upsert({id:session.user.id,name:d.name,handle:h,suburb:d.suburb,state:d.state,bio:d.bio,avatar_emoji:d.avatar_emoji||"🍰",delivery:d.delivery,pickup:d.pickup,lat:coords?.lat||null,lng:coords?.lng||null});
+    if(error){showToast("Error saving");return false;}await loadProfile(session.user.id);return true;}
   async function addMenuItem(item){const{error}=await supabase.from("menu_items").insert({seller_id:session.user.id,name:item.name,category:item.cat,price:parseFloat(item.price),description:item.desc,emoji:item.emoji,allergens:item.allergens});if(error){showToast("Error adding");return false;}await loadProfile(session.user.id);await loadSellers();return true;}
   async function removeMenuItem(id){await supabase.from("menu_items").delete().eq("id",id);await loadProfile(session.user.id);await loadSellers();}
   async function loadMyMenu(){if(!session?.user)return[];const{data}=await supabase.from("menu_items").select("*").eq("seller_id",session.user.id).eq("active",true);return data||[];}
   async function placeOrder(items,method,addr){const grouped={};items.forEach(({seller,item,qty})=>{if(!grouped[seller.id])grouped[seller.id]={seller,items:[]};grouped[seller.id].items.push({item,qty});});for(const g of Object.values(grouped)){const total=g.items.reduce((s,i)=>s+i.item.price*i.qty,0)+(method==="delivery"?8.5:0);const{data:ord,error}=await supabase.from("orders").insert({buyer_id:session.user.id,seller_id:g.seller.id,method,delivery_address:addr,total,notes:""}).select().single();if(error||!ord){showToast("Error");return null;}await supabase.from("order_items").insert(g.items.map(i=>({order_id:ord.id,menu_item_id:i.item.id,item_name:i.item.name,quantity:i.qty,unit_price:i.item.price})));}return true;}
 
   // ─── Places Search ────────────────────────────────────────────────────────
-  const searchPlaces=async(input)=>{if(!input||input.length<3||!window.google?.maps?.places){setPlaceSuggestions([]);return;}try{const{suggestions}=await google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions({input,includedRegionCodes:["au"],includedPrimaryTypes:["geocode"]});if(suggestions?.length){setPlaceSuggestions(suggestions.map(s=>({description:s.placePrediction.text.text,place_id:s.placePrediction.placeId})));setShowDropdown(true);}else setPlaceSuggestions([]);}catch(e){const m=SUBURBS.filter(sb=>sb.name.toLowerCase().includes(input.toLowerCase())).slice(0,6);setPlaceSuggestions(m.map(sb=>({description:`${sb.name}, WA`,place_id:null,_sub:sb})));setShowDropdown(m.length>0);}};
+  const searchPlaces=async(input)=>{if(!input||input.length<3||!window.google?.maps?.places){setPlaceSuggestions([]);return;}try{const{suggestions}=await google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions({input,includedRegionCodes:["au"],includedPrimaryTypes:["geocode"]});if(suggestions?.length){setPlaceSuggestions(suggestions.map(s=>({description:s.placePrediction.text.text,place_id:s.placePrediction.placeId})));setShowDropdown(true);}else setPlaceSuggestions([]);}catch(e){console.error("Places error:",e);setPlaceSuggestions([]);}};
 
   const selectPlace=async(placeId,desc)=>{setAddressSearch(desc);setShowDropdown(false);try{const{Place}=google.maps.places;const place=new Place({id:placeId});await place.fetchFields({fields:["location","addressComponents"]});const loc=place.location;const comp=place.addressComponents||[];const sub=comp.find(c=>c.types.includes("locality"))||comp.find(c=>c.types.includes("sublocality"));setChosenSuburb({name:sub?.longText||desc.split(",")[0],lat:loc.lat(),lng:loc.lng(),fullAddress:desc});}catch(e){setChosenSuburb({name:desc.split(",")[0],lat:-31.9505,lng:115.8605,fullAddress:desc});}};
 
@@ -147,7 +138,10 @@ export default function App(){
   const cartT=cart.reduce((a,c)=>a+c.item.price*c.qty,0);
   const go=v=>setView(v);const back=()=>setView(null);
 
-  const sellersWithDist=sellers.map(sv=>{const sub=SUBURBS.find(x=>x.name.toLowerCase()===sv.suburb?.toLowerCase());const dist=(chosenSuburb&&sub)?Math.round(getDistance(chosenSuburb.lat,chosenSuburb.lng,sub.lat,sub.lng)*10)/10:999;return{...sv,dist};}).filter(sv=>!chosenSuburb||sv.dist<=20);
+  const sellersWithDist=sellers.map(sv=>{
+    const dist=(chosenSuburb&&sv.lat&&sv.lng)?Math.round(getDistance(chosenSuburb.lat,chosenSuburb.lng,sv.lat,sv.lng)*10)/10:-1;
+    return{...sv,dist};
+  }).filter(sv=>sv.dist===-1||sv.dist<=20);
   const handleNavClick=id=>{if((id==="sell"||id==="account"||id==="cart")&&!session){requireAuth(id);return;}setTab(id);setView(null);};
 
   // ━━━ LOADING ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -213,7 +207,10 @@ export default function App(){
         <div style={{marginBottom:12}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Street address *</label><input style={s.inp} placeholder="123 Baker Street" value={cpAd} onChange={e=>setCpAd(e.target.value)}/></div>
         <div style={{display:"flex",gap:8,marginBottom:16}}><div style={{flex:2}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Suburb *</label><input style={s.inp} placeholder="Subiaco" value={cpSb} onChange={e=>setCpSb(e.target.value)}/></div><div style={{flex:1}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>State</label><select style={s.sel} value={cpSt} onChange={e=>setCpSt(e.target.value)}>{["WA","NSW","VIC","QLD","SA","TAS","NT","ACT"].map(x=><option key={x}>{x}</option>)}</select></div><div style={{flex:1}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Postcode *</label><input style={s.inp} placeholder="6008" value={cpPc} onChange={e=>setCpPc(e.target.value)}/></div></div>
         {cpErr&&<div style={{padding:"10px 14px",background:"#fef2f2",borderRadius:t.rs,color:t.no,fontSize:13,marginBottom:12}}>{cpErr}</div>}
-        <button style={{...s.btn(true),opacity:(ok&&!cpSaving)?1:.5}} disabled={!ok||cpSaving} onClick={async()=>{setCpSaving(true);const{error}=await supabase.from("profiles").update({name:`${cpF} ${cpL}`,first_name:cpF,last_name:cpL,phone:cpPh,address:`${cpAd}, ${cpSb} ${cpSt} ${cpPc}`,suburb:cpSb,state:cpSt,postcode:cpPc,handle:"@"+cpF.toLowerCase().replace(/[^a-z0-9]/g,"")}).eq("id",session.user.id);if(error){setCpErr("Something went wrong.");setCpSaving(false);return;}await loadProfile(session.user.id);setCpSaving(false);showToast("Profile complete! 🎉");}}>{cpSaving?"Saving...":"Continue"}</button>
+        <button style={{...s.btn(true),opacity:(ok&&!cpSaving)?1:.5}} disabled={!ok||cpSaving} onClick={async()=>{setCpSaving(true);
+          const coords=await geocodeSuburb(cpSb,cpSt);
+          const{error}=await supabase.from("profiles").update({name:`${cpF} ${cpL}`,first_name:cpF,last_name:cpL,phone:cpPh,address:`${cpAd}, ${cpSb} ${cpSt} ${cpPc}`,suburb:cpSb,state:cpSt,postcode:cpPc,handle:"@"+cpF.toLowerCase().replace(/[^a-z0-9]/g,""),lat:coords?.lat||null,lng:coords?.lng||null}).eq("id",session.user.id);
+          if(error){setCpErr("Something went wrong.");setCpSaving(false);return;}await loadProfile(session.user.id);setCpSaving(false);showToast("Profile complete! 🎉");}}>{cpSaving?"Saving...":"Continue"}</button>
       </div>
       <button style={{background:"none",border:"none",color:t.mut,cursor:"pointer",fontSize:13,display:"block",margin:"12px auto 0"}} onClick={handleLogout}>Sign out</button>
     </div>{toast&&<div style={{position:"fixed",top:20,left:"50%",transform:"translateX(-50%)",background:t.ok,color:"#fff",padding:"10px 24px",borderRadius:24,fontSize:13,fontWeight:600,zIndex:200}}>✓ {toast}</div>}</div>;
@@ -222,7 +219,7 @@ export default function App(){
 
   // ━━━ LANDING PAGE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   if(!chosenSuburb&&!session){
-    const doSearch=(val)=>{setAddressSearch(val);if(val.length<3){setPlaceSuggestions([]);setShowDropdown(false);return;}clearTimeout(debounceRef.current);debounceRef.current=setTimeout(()=>{if(window.google?.maps?.places)searchPlaces(val);else{const m=SUBURBS.filter(sb=>sb.name.toLowerCase().includes(val.toLowerCase())).slice(0,6);setPlaceSuggestions(m.map(sb=>({description:`${sb.name}, WA`,place_id:null,_sub:sb})));setShowDropdown(m.length>0);}},300);};
+    const doSearch=(val)=>{setAddressSearch(val);if(val.length<3){setPlaceSuggestions([]);setShowDropdown(false);return;}clearTimeout(debounceRef.current);debounceRef.current=setTimeout(()=>{if(window.google?.maps?.places)searchPlaces(val);else{setPlaceSuggestions([]);setShowDropdown(false);}},300);};
     return<div style={{...s.page,display:"flex",alignItems:"center",justifyContent:"center",padding:20,minHeight:"100vh"}}>
       <div style={{width:"100%",maxWidth:500,textAlign:"center"}}>
         <img src="/logo-full.png" alt="HomeBaked" style={{maxWidth:280,width:"100%",height:"auto",margin:"0 auto 16px"}} onError={e=>{e.target.style.display="none"}}/>
@@ -264,9 +261,9 @@ export default function App(){
 
   // ─── Browse Search (native ref to prevent focus loss) ─────────────────────
   const browseSearchBar=<div style={{padding:`0 ${s.px}px`,marginBottom:10}}><div style={{position:"relative"}}>
-    <input style={{...s.inp,paddingLeft:38}} placeholder="Search address or suburb..." ref={el=>{if(el&&!el._hb){el._hb=true;let tm=null;el.addEventListener("input",ev=>{const v=ev.target.value;clearTimeout(tm);tm=setTimeout(()=>{setAddressSearch(v);if(v.length<3){setPlaceSuggestions([]);setShowDropdown(false);return;}if(window.google?.maps?.places)searchPlaces(v);else{const m=SUBURBS.filter(sb=>sb.name.toLowerCase().includes(v.toLowerCase())).slice(0,6);setPlaceSuggestions(m.map(sb=>({description:`${sb.name}, WA`,place_id:null,_sub:sb})));setShowDropdown(m.length>0);}},300);});}}}/>
+    <input style={{...s.inp,paddingLeft:38}} placeholder="Search address or suburb..." ref={el=>{if(el&&!el._hb){el._hb=true;let tm=null;el.addEventListener("input",ev=>{const v=ev.target.value;clearTimeout(tm);tm=setTimeout(()=>{setAddressSearch(v);if(v.length<3){setPlaceSuggestions([]);setShowDropdown(false);return;}if(window.google?.maps?.places)searchPlaces(v);else{setPlaceSuggestions([]);setShowDropdown(false);}},300);});}}}/>
     <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:t.lit,pointerEvents:"none"}}><I d={ic.loc} s={16}/></span>
-    {showDropdown&&placeSuggestions.length>0&&<div style={{position:"absolute",top:"100%",left:0,right:0,marginTop:4,background:t.card,borderRadius:t.rs,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",border:`1px solid ${t.bdr}`,zIndex:10,maxHeight:300,overflowY:"auto"}}>{placeSuggestions.map((p,i)=><button key={p.place_id||i} onClick={()=>{if(p._sub){setChosenSuburb(p._sub);setShowDropdown(false);}else selectPlace(p.place_id,p.description);}} style={{display:"flex",alignItems:"center",gap:10,width:"100%",padding:"12px 16px",border:"none",background:"none",cursor:"pointer",fontSize:14,color:t.txt,textAlign:"left",borderBottom:`1px solid ${t.bdr}`}} onMouseEnter={e=>e.currentTarget.style.background=t.bg} onMouseLeave={e=>e.currentTarget.style.background="none"}><I d={ic.loc} s={16} c={t.lit}/><span style={{flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.description}</span></button>)}</div>}
+    {showDropdown&&placeSuggestions.length>0&&<div style={{position:"absolute",top:"100%",left:0,right:0,marginTop:4,background:t.card,borderRadius:t.rs,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",border:`1px solid ${t.bdr}`,zIndex:10,maxHeight:300,overflowY:"auto"}}>{placeSuggestions.map((p,i)=><button key={p.place_id||i} onClick={()=>selectPlace(p.place_id,p.description)} style={{display:"flex",alignItems:"center",gap:10,width:"100%",padding:"12px 16px",border:"none",background:"none",cursor:"pointer",fontSize:14,color:t.txt,textAlign:"left",borderBottom:`1px solid ${t.bdr}`}} onMouseEnter={e=>e.currentTarget.style.background=t.bg} onMouseLeave={e=>e.currentTarget.style.background="none"}><I d={ic.loc} s={16} c={t.lit}/><span style={{flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.description}</span></button>)}</div>}
   </div></div>;
 
   // ─── Browse Header (rendered at top level like search bar) ──────────────
@@ -288,7 +285,7 @@ export default function App(){
         {list.length===0&&<div style={{textAlign:"center",padding:40,color:t.mut}}><div style={{fontSize:44,marginBottom:8}}>🍰</div><div style={{fontWeight:600}}>No bakers found nearby</div><div style={{fontSize:13,marginTop:4}}>Try a different suburb or be the first to sell!</div></div>}
         <div style={s.grid}>{list.map(x=><div key={x.id} style={{...s.card,cursor:"pointer"}} onClick={()=>go({type:"seller",data:x})} onMouseEnter={e=>{e.currentTarget.style.boxShadow=t.shLg}} onMouseLeave={e=>{e.currentTarget.style.boxShadow=t.sh}}>
           <div style={{padding:16}}><div style={{display:"flex",gap:12,alignItems:"center"}}><div style={{width:52,height:52,borderRadius:14,background:t.priL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,flexShrink:0,overflow:"hidden"}}>{x.shop_image_url?<img src={x.shop_image_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:(x.avatar_emoji||"🍰")}</div>
-            <div style={{flex:1,minWidth:0}}><div style={{display:"flex",alignItems:"center",gap:6}}><span style={{fontWeight:700,fontSize:15}}>{x.name}</span>{x.verified&&<span style={{fontSize:11,color:t.ok}}>✓</span>}</div><div style={{fontSize:12,color:t.mut,marginTop:1}}>{x.suburb} · {x.dist<999?`${x.dist}km`:""}</div><div style={{marginTop:3}}><Stars r={x.rating}/> <span style={{fontSize:11,color:t.lit}}>({x.reviews})</span></div></div></div>
+            <div style={{flex:1,minWidth:0}}><div style={{display:"flex",alignItems:"center",gap:6}}><span style={{fontWeight:700,fontSize:15}}>{x.name}</span>{x.verified&&<span style={{fontSize:11,color:t.ok}}>✓</span>}</div><div style={{fontSize:12,color:t.mut,marginTop:1}}>{x.suburb}{x.dist>0&&x.dist<999?` · ${x.dist}km`:""}</div><div style={{marginTop:3}}><Stars r={x.rating}/> <span style={{fontSize:11,color:t.lit}}>({x.reviews})</span></div></div></div>
             <div style={{display:"flex",gap:5,marginTop:10,flexWrap:"wrap"}}>{x.pickup&&<span style={s.badge(t.okBg,"#166534")}>Pickup</span>}{x.delivery&&<span style={s.badge("#dbeafe","#1e40af")}>Delivery</span>}</div>
             <div style={{display:"flex",gap:4,marginTop:8}}>{x.menu.slice(0,3).map(m=><div key={m.id} style={{width:40,height:40,borderRadius:8,background:"#fef3c7",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>{m.emoji}</div>)}{x.menu.length>3&&<div style={{width:40,height:40,borderRadius:8,background:t.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:t.mut,fontWeight:600}}>+{x.menu.length-3}</div>}</div>
           </div></div>)}</div>
@@ -347,7 +344,10 @@ export default function App(){
       <div style={{marginBottom:14}}><label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:4}}>Suburb *</label><div style={{display:"flex",gap:8}}><input style={{...s.inp,flex:1}} value={sf.suburb} onChange={e=>setStoreForm(p=>({...p,suburb:e.target.value}))}/><select style={{...s.sel,width:80}} value={sf.state} onChange={e=>setStoreForm(p=>({...p,state:e.target.value}))}>{["WA","NSW","VIC","QLD","SA","TAS","NT","ACT"].map(x=><option key={x}>{x}</option>)}</select></div></div>
       <div style={{marginBottom:14}}><label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:4}}>Store emoji</label><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{EMOJIS.map(e=><button key={e} onClick={()=>setStoreForm(p=>({...p,avatar_emoji:e}))} style={{width:40,height:40,borderRadius:10,border:sf.avatar_emoji===e?`2px solid ${t.pri}`:`1.5px solid ${t.bdr}`,background:sf.avatar_emoji===e?t.priL:t.card,fontSize:20,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>{e}</button>)}</div></div>
       <div style={{marginBottom:20}}><label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:8}}>Fulfilment</label><div style={{display:"flex",gap:16}}><label style={{fontSize:14,display:"flex",gap:8,alignItems:"center",cursor:"pointer",padding:"10px 16px",borderRadius:t.rs,background:sf.pickup?t.okBg:t.bg,border:`1.5px solid ${sf.pickup?t.ok:t.bdr}`}}><input type="checkbox" checked={sf.pickup} onChange={e=>setStoreForm(p=>({...p,pickup:e.target.checked}))}/> 📦 Pickup</label><label style={{fontSize:14,display:"flex",gap:8,alignItems:"center",cursor:"pointer",padding:"10px 16px",borderRadius:t.rs,background:sf.delivery?"#dbeafe":t.bg,border:`1.5px solid ${sf.delivery?"#3b82f6":t.bdr}`}}><input type="checkbox" checked={sf.delivery} onChange={e=>setStoreForm(p=>({...p,delivery:e.target.checked}))}/> 🚗 Delivery</label></div></div>
-      <button style={{...s.btn(true),marginBottom:8}} onClick={async()=>{if(!sf.name||!sf.suburb){showToast("Name and suburb required");return;}setSaving(true);await supabase.from("profiles").update({name:sf.name,handle:"@"+sf.name.toLowerCase().replace(/[^a-z0-9]/g,""),bio:(sf.bio||"").slice(0,500),suburb:sf.suburb,state:sf.state,avatar_emoji:sf.avatar_emoji,delivery:sf.delivery,pickup:sf.pickup}).eq("id",session.user.id);await loadProfile(session.user.id);await loadSellers();setSaving(false);setEditingStore(false);showToast("Kitchen updated! ✨");}}>{saving?"Saving...":"Save Changes"}</button>
+      <button style={{...s.btn(true),marginBottom:8}} onClick={async()=>{if(!sf.name||!sf.suburb){showToast("Name and suburb required");return;}setSaving(true);
+        const coords=await geocodeSuburb(sf.suburb,sf.state);
+        await supabase.from("profiles").update({name:sf.name,handle:"@"+sf.name.toLowerCase().replace(/[^a-z0-9]/g,""),bio:(sf.bio||"").slice(0,500),suburb:sf.suburb,state:sf.state,avatar_emoji:sf.avatar_emoji,delivery:sf.delivery,pickup:sf.pickup,lat:coords?.lat||null,lng:coords?.lng||null}).eq("id",session.user.id);
+        await loadProfile(session.user.id);await loadSellers();setSaving(false);setEditingStore(false);showToast("Kitchen updated! ✨");}}>{saving?"Saving...":"Save Changes"}</button>
       <button style={s.btn(false)} onClick={()=>setEditingStore(false)}>Cancel</button>
     </div></>;}
 
