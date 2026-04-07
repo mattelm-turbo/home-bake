@@ -99,6 +99,7 @@ export default function App(){
   const[onboardStep,setOnboardStep]=useState(0);
   const[toast,setToast]=useState(null);
   const[authReturnTo,setAuthReturnTo]=useState(null);
+  const[teapotMode,setTeapotMode]=useState(false);
   const debounceRef=useRef(null);
   const browseSearchRef=useRef(null);
 
@@ -126,7 +127,12 @@ export default function App(){
     const coords=await geocodeSuburb(d.suburb,d.state);
     const{error}=await supabase.from("profiles").upsert({id:session.user.id,name:d.name,handle:h,suburb:d.suburb,state:d.state,bio:d.bio,avatar_emoji:d.avatar_emoji||"🍰",delivery:d.delivery,pickup:d.pickup,lat:coords?.lat||null,lng:coords?.lng||null});
     if(error){showToast("Error saving");return false;}await loadProfile(session.user.id);return true;}
-  async function addMenuItem(item){const{error}=await supabase.from("menu_items").insert({seller_id:session.user.id,name:item.name,category:item.cat,price:parseFloat(item.price),description:item.desc,emoji:item.emoji,allergens:item.allergens});if(error){showToast("Error adding");return false;}await loadProfile(session.user.id);await loadSellers();return true;}
+  async function addMenuItem(item){
+    // 🫖 Easter egg: HTTP 418
+    if(item.name.toLowerCase().trim()==="teapot"||item.name.toLowerCase().trim()==="a teapot"){
+      setTeapotMode(true);return false;
+    }
+    const{error}=await supabase.from("menu_items").insert({seller_id:session.user.id,name:item.name,category:item.cat,price:parseFloat(item.price),description:item.desc,emoji:item.emoji,allergens:item.allergens});if(error){showToast("Error adding");return false;}await loadProfile(session.user.id);await loadSellers();return true;}
   async function removeMenuItem(id){await supabase.from("menu_items").delete().eq("id",id);await loadProfile(session.user.id);await loadSellers();}
   async function loadMyMenu(){if(!session?.user)return[];const{data}=await supabase.from("menu_items").select("*").eq("seller_id",session.user.id).eq("active",true);return data||[];}
   async function placeOrder(items,method,addr){const grouped={};items.forEach(({seller,item,qty})=>{if(!grouped[seller.id])grouped[seller.id]={seller,items:[]};grouped[seller.id].items.push({item,qty});});for(const g of Object.values(grouped)){const total=g.items.reduce((s,i)=>s+i.item.price*i.qty,0)+(method==="delivery"?8.5:0);const{data:ord,error}=await supabase.from("orders").insert({buyer_id:session.user.id,seller_id:g.seller.id,method,delivery_address:addr,total,notes:""}).select().single();if(error||!ord){showToast("Error");return null;}await supabase.from("order_items").insert(g.items.map(i=>({order_id:ord.id,menu_item_id:i.item.id,item_name:i.item.name,quantity:i.qty,unit_price:i.item.price})));}return true;}
@@ -157,6 +163,33 @@ export default function App(){
     return{...sv,dist};
   }).filter(sv=>sv.dist===-1||sv.dist<=20);
   const handleNavClick=id=>{if((id==="sell"||id==="account"||id==="cart")&&!session){requireAuth(id);return;}setTab(id);setView(null);};
+
+  // ━━━ 🫖 ERROR 418 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  if(teapotMode)return<div style={{...s.page,display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh",padding:20}} onClick={()=>setTeapotMode(false)}>
+    <div style={{textAlign:"center",maxWidth:420}}>
+      <div style={{fontSize:120,marginBottom:8,animation:"wobble 0.5s ease-in-out",filter:"drop-shadow(0 8px 24px rgba(0,0,0,0.15))"}}>🫖</div>
+      <div style={{fontFamily:"monospace",fontSize:14,color:t.no,background:"#fef2f2",padding:"8px 16px",borderRadius:8,display:"inline-block",marginBottom:16,fontWeight:700,letterSpacing:1}}>HTTP 418</div>
+      <div style={{fontSize:28,fontWeight:800,marginBottom:8,color:t.txt}}>I'm a Teapot</div>
+      <div style={{fontSize:15,color:t.mut,lineHeight:1.7,marginBottom:8}}>
+        The server refuses to brew coffee because it is, permanently, a teapot.
+      </div>
+      <div style={{fontSize:14,color:t.mut,lineHeight:1.7,marginBottom:24,fontStyle:"italic"}}>
+        This is a baking platform, not a tea party.<br/>
+        Although... we do accept scones. 🫡
+      </div>
+      <div style={{background:t.card,borderRadius:t.r,padding:16,boxShadow:t.sh,textAlign:"left",marginBottom:20}}>
+        <div style={{fontFamily:"monospace",fontSize:12,color:t.mut,lineHeight:1.8}}>
+          <span style={{color:t.no}}>POST</span> /api/menu-items<br/>
+          <span style={{color:t.no}}>Status:</span> 418 I'm a Teapot<br/>
+          <span style={{color:t.no}}>Body:</span> {`{ "item": "Teapot", "error": "Nice try." }`}<br/>
+          <span style={{color:t.no}}>RFC:</span> 2324 — Hyper Text Coffee Pot Control Protocol<br/>
+          <span style={{color:t.no}}>Suggestion:</span> Try listing a lamington instead.
+        </div>
+      </div>
+      <div style={{fontSize:13,color:t.lit,marginBottom:12}}>Tap anywhere to return to reality</div>
+      <style>{`@keyframes wobble { 0%{transform:rotate(0)} 25%{transform:rotate(-15deg)} 50%{transform:rotate(10deg)} 75%{transform:rotate(-5deg)} 100%{transform:rotate(0)} }`}</style>
+    </div>
+  </div>;
 
   // ━━━ LOADING ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   if(initialLoading)return<div style={{...s.page,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{textAlign:"center"}}><div style={{fontSize:48}}>🍰</div><div style={{marginTop:12,color:t.mut}}>Loading...</div></div></div>;
