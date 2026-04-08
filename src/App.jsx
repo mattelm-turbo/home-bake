@@ -433,6 +433,10 @@ export default function App(){
     const[epPostcode,setEpPostcode]=useState(profile?.postcode||"");
     const[epSaving,setEpSaving]=useState(false);
     const[unreadCount,setUnreadCount]=useState(0);
+    const[reportingOrder,setReportingOrder]=useState(null);
+    const[disputeReason,setDisputeReason]=useState("");
+    const[disputeDesc,setDisputeDesc]=useState("");
+    const[disputeSubmitting,setDisputeSubmitting]=useState(false);
     const msgEndRef=useRef(null);
 
     useEffect(()=>{
@@ -467,6 +471,51 @@ export default function App(){
       setMsgInput("");
       loadMessages(activeOrder.id);
     };
+
+    // ─── Report Issue View ─────────────────────────────────────────────
+    if(reportingOrder){
+      const reasons=[{id:"wrong_item",label:"Wrong item received",icon:"📦"},{id:"quality_issue",label:"Quality not as described",icon:"👎"},{id:"damaged",label:"Item arrived damaged",icon:"💔"},{id:"not_received",label:"Never received my order",icon:"❌"},{id:"other",label:"Other issue",icon:"❓"}];
+      return<>{mobileHeader}<div style={s.hdr}><button style={s.bck} onClick={()=>{setReportingOrder(null);setDisputeReason("");setDisputeDesc("");}}><I d={ic.back}/></button><span style={s.hdrT}>Report an Issue</span></div>
+        <div style={{...s.sec,maxWidth:500,margin:"0 auto"}}>
+          <div style={{...s.card,padding:14,marginBottom:16}}>
+            <div style={{fontSize:13,color:t.mut}}>Order #{reportingOrder.id.slice(0,8)} · {reportingOrder.seller?.name} · ${Number(reportingOrder.total).toFixed(2)}</div>
+            <div style={{fontSize:12,color:t.lit,marginTop:2}}>{reportingOrder.order_items?.map(oi=>`${oi.quantity}x ${oi.item_name}`).join(", ")}</div>
+          </div>
+
+          <div style={{fontWeight:600,fontSize:14,marginBottom:10}}>What went wrong?</div>
+          <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:16}}>
+            {reasons.map(r=><button key={r.id} onClick={()=>setDisputeReason(r.id)} style={{display:"flex",alignItems:"center",gap:12,padding:"14px 16px",borderRadius:t.rs,border:disputeReason===r.id?`2px solid ${t.pri}`:`1.5px solid ${t.bdr}`,background:disputeReason===r.id?t.priL:t.card,cursor:"pointer",textAlign:"left"}}>
+              <span style={{fontSize:22}}>{r.icon}</span>
+              <span style={{fontSize:14,fontWeight:disputeReason===r.id?600:400,color:disputeReason===r.id?t.pri:t.txt}}>{r.label}</span>
+            </button>)}
+          </div>
+
+          <div style={{marginBottom:16}}>
+            <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:4}}>Tell us more *</label>
+            <textarea style={{...s.ta,minHeight:100}} placeholder="Please describe the issue in detail. What happened? What did you expect?" value={disputeDesc} onChange={e=>setDisputeDesc(e.target.value)}/>
+          </div>
+
+          <div style={{...s.tip,background:"#eff6ff",color:"#1e40af",marginBottom:16}}>
+            When you submit, the seller will be notified and given a chance to resolve the issue. You can communicate with them via the message thread.
+          </div>
+
+          <button style={{...s.btn(true),opacity:(disputeReason&&disputeDesc.trim()&&!disputeSubmitting)?1:.5}} disabled={!disputeReason||!disputeDesc.trim()||disputeSubmitting} onClick={async()=>{
+            setDisputeSubmitting(true);
+            // Create dispute record
+            await supabase.from("disputes").insert({order_id:reportingOrder.id,buyer_id:session.user.id,seller_id:reportingOrder.seller_id,reason:disputeReason,description:disputeDesc.trim()});
+            // Update order status to disputed
+            await supabase.from("orders").update({status:"disputed"}).eq("id",reportingOrder.id);
+            // Auto-message the seller
+            const reasonLabels={wrong_item:"wrong item received",quality_issue:"quality not as described",damaged:"item arrived damaged",not_received:"order not received",other:"an issue"};
+            await supabase.from("messages").insert({order_id:reportingOrder.id,sender_id:session.user.id,receiver_id:reportingOrder.seller_id,body:`⚠️ Issue reported: ${reasonLabels[disputeReason]||"an issue"}. "${disputeDesc.trim().slice(0,200)}". Please respond to resolve this.`});
+            setDisputeSubmitting(false);
+            setReportingOrder(null);setDisputeReason("");setDisputeDesc("");
+            loadOrders();
+            showToast("Issue reported — the seller has been notified");
+          }}>{disputeSubmitting?"Submitting...":"Submit Report"}</button>
+        </div>
+      </>;
+    }
 
     // ─── Message Thread View ────────────────────────────────────────────
     if(activeOrder){
@@ -580,9 +629,10 @@ export default function App(){
             </div>
             <div style={{fontSize:12,color:t.mut,marginBottom:8}}>{o.order_items?.map(oi=>`${oi.quantity}x ${oi.item_name}`).join(", ")}</div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <span style={{...s.badge(o.status==="completed"?t.okBg:o.status==="cancelled"?"#fef2f2":"#fefce8",o.status==="completed"?"#166534":o.status==="cancelled"?t.no:"#854d0e")}}>{o.status}</span>
+                              <span style={{...s.badge(o.status==="completed"?t.okBg:o.status==="cancelled"?"#fef2f2":o.status==="disputed"?"#fef2f2":"#fefce8",o.status==="completed"?"#166534":o.status==="cancelled"?t.no:o.status==="disputed"?t.no:"#854d0e")}}>{o.status==="disputed"?"⚠️ disputed":o.status}</span>
               <div style={{display:"flex",gap:6}}>
                 <button onClick={()=>{setActiveOrder(o);}} style={{...s.btnS(false),display:"flex",alignItems:"center",gap:4,fontSize:11}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Message</button>
+                {o.status!=="cancelled"&&o.status!=="disputed"&&<button onClick={()=>{setReportingOrder(o);setDisputeReason("");setDisputeDesc("");}} style={{...s.btnS(false),display:"flex",alignItems:"center",gap:4,fontSize:11,color:t.no}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Report Issue</button>}
               </div>
             </div>
             <div style={{fontSize:10,color:t.lit,marginTop:6}}>{new Date(o.created_at).toLocaleString("en-AU",{day:"numeric",month:"short",year:"numeric",hour:"numeric",minute:"2-digit"})}</div>
@@ -600,7 +650,7 @@ export default function App(){
                 <span style={{...s.badge(o.status==="completed"?t.okBg:o.status==="cancelled"?"#fef2f2":"#fefce8",o.status==="completed"?"#166534":o.status==="cancelled"?t.no:"#854d0e")}}>{o.status}</span>
                 <button onClick={()=>setActiveOrder(o)} style={{...s.btnS(false),display:"flex",alignItems:"center",gap:4,fontSize:11}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Message</button>
               </div>
-              {o.status!=="completed"&&o.status!=="cancelled"&&<div>
+              {o.status!=="completed"&&o.status!=="cancelled"&&o.status!=="disputed"&&<div>
                 <div style={{fontSize:12,fontWeight:600,marginBottom:6,color:t.mut}}>Update status</div>
                 <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                   {[{status:"confirmed",label:"✓ Confirm",bg:"#dbeafe",fg:"#1e40af"},{status:"ready",label:o.method==="pickup"?"📦 Ready for Pickup":"🚗 Out for Delivery",bg:"#fef3c7",fg:"#92400e"},{status:"completed",label:"✅ Completed",bg:t.okBg,fg:"#166534"},{status:"cancelled",label:"✕ Cancel",bg:"#fef2f2",fg:t.no}]
@@ -612,6 +662,25 @@ export default function App(){
                     await supabase.from("messages").insert({order_id:o.id,sender_id:session.user.id,receiver_id:o.buyer_id,body:msgs[st.status]||`Order status updated to ${st.status}`});
                     loadOrders();showToast(`Order ${st.status}`);
                   }} style={{padding:"6px 12px",borderRadius:20,fontSize:12,fontWeight:600,border:"none",cursor:"pointer",background:st.bg,color:st.fg}}>{st.label}</button>)}
+                </div>
+              </div>}
+              {o.status==="disputed"&&<div style={{marginTop:8,padding:12,background:"#fef2f2",borderRadius:t.rs}}>
+                <div style={{fontSize:13,fontWeight:600,color:t.no,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>⚠️ Buyer reported an issue</div>
+                <div style={{fontSize:12,color:t.mut,marginBottom:10}}>Please message the buyer to resolve. Once agreed, choose an action:</div>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                  <button onClick={async()=>{
+                    await supabase.from("orders").update({status:"completed"}).eq("id",o.id);
+                    await supabase.from("disputes").update({status:"resolved",resolution:"resolved_by_seller",resolved_at:new Date().toISOString()}).eq("order_id",o.id).eq("status","open");
+                    await supabase.from("messages").insert({order_id:o.id,sender_id:session.user.id,receiver_id:o.buyer_id,body:"✅ This issue has been resolved. Thank you for your patience!"});
+                    loadOrders();showToast("Dispute resolved");
+                  }} style={{padding:"6px 12px",borderRadius:20,fontSize:12,fontWeight:600,border:"none",cursor:"pointer",background:t.okBg,color:"#166534"}}>✅ Mark Resolved</button>
+                  <button onClick={async()=>{
+                    await supabase.from("orders").update({status:"cancelled"}).eq("id",o.id);
+                    await supabase.from("disputes").update({status:"resolved",resolution:"refund_offered",resolved_at:new Date().toISOString()}).eq("order_id",o.id).eq("status","open");
+                    await supabase.from("messages").insert({order_id:o.id,sender_id:session.user.id,receiver_id:o.buyer_id,body:"💰 A refund has been offered for this order. Please arrange directly."});
+                    loadOrders();showToast("Refund offered");
+                  }} style={{padding:"6px 12px",borderRadius:20,fontSize:12,fontWeight:600,border:"none",cursor:"pointer",background:"#dbeafe",color:"#1e40af"}}>💰 Offer Refund</button>
+                  <button onClick={()=>setActiveOrder(o)} style={{padding:"6px 12px",borderRadius:20,fontSize:12,fontWeight:600,border:"none",cursor:"pointer",background:t.card,color:t.acc,boxShadow:`inset 0 0 0 1.5px ${t.bdr}`}}>💬 Message Buyer</button>
                 </div>
               </div>}
               <div style={{fontSize:10,color:t.lit,marginTop:6}}>{new Date(o.created_at).toLocaleString("en-AU",{day:"numeric",month:"short",year:"numeric",hour:"numeric",minute:"2-digit"})}</div>
