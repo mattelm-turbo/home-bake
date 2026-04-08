@@ -313,7 +313,25 @@ export default function App(){
     {showDropdown&&placeSuggestions.length>0&&<div style={{position:"absolute",top:"100%",left:0,right:0,marginTop:4,background:t.card,borderRadius:t.rs,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",border:`1px solid ${t.bdr}`,zIndex:10,maxHeight:300,overflowY:"auto"}}>{placeSuggestions.map((p,i)=><button key={p.place_id||i} onClick={()=>selectPlace(p.place_id,p.description)} style={{display:"flex",alignItems:"center",gap:10,width:"100%",padding:"12px 16px",border:"none",background:"none",cursor:"pointer",fontSize:14,color:t.txt,textAlign:"left",borderBottom:`1px solid ${t.bdr}`}} onMouseEnter={e=>e.currentTarget.style.background=t.bg} onMouseLeave={e=>e.currentTarget.style.background="none"}><I d={ic.loc} s={16} c={t.lit}/><span style={{flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.description}</span></button>)}</div>}
   </div></div>;
 
-  // ─── Consistent mobile header ──────────────────────────────────────────
+  // ─── Lightbox state ────────────────────────────────────────────────────
+  const[lightbox,setLightbox]=useState(null); // {images:[], index:0}
+
+  const LightboxEl=lightbox?<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.9)",zIndex:300,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}} onClick={()=>setLightbox(null)}>
+    {/* Close button */}
+    <button onClick={()=>setLightbox(null)} style={{position:"absolute",top:16,right:16,background:"rgba(255,255,255,0.15)",border:"none",cursor:"pointer",width:40,height:40,borderRadius:20,display:"flex",alignItems:"center",justifyContent:"center",zIndex:2}}><I d={ic.x} s={22} c="#fff"/></button>
+    {/* Counter */}
+    <div style={{position:"absolute",top:20,left:"50%",transform:"translateX(-50%)",color:"rgba(255,255,255,0.7)",fontSize:14,fontWeight:500}}>{lightbox.index+1} / {lightbox.images.length}</div>
+    {/* Previous button */}
+    {lightbox.images.length>1&&<button onClick={e=>{e.stopPropagation();setLightbox(p=>({...p,index:(p.index-1+p.images.length)%p.images.length}));}} style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",background:"rgba(255,255,255,0.15)",border:"none",cursor:"pointer",width:44,height:44,borderRadius:22,display:"flex",alignItems:"center",justifyContent:"center",zIndex:2}}><I d={ic.back} s={22} c="#fff"/></button>}
+    {/* Next button */}
+    {lightbox.images.length>1&&<button onClick={e=>{e.stopPropagation();setLightbox(p=>({...p,index:(p.index+1)%p.images.length}));}} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"rgba(255,255,255,0.15)",border:"none",cursor:"pointer",width:44,height:44,borderRadius:22,display:"flex",alignItems:"center",justifyContent:"center",zIndex:2}}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></button>}
+    {/* Image */}
+    <img src={lightbox.images[lightbox.index].image_url} alt={lightbox.images[lightbox.index].caption||""} style={{maxWidth:"90vw",maxHeight:"80vh",objectFit:"contain",borderRadius:8}} onClick={e=>e.stopPropagation()}/>
+    {/* Caption */}
+    {lightbox.images[lightbox.index].caption&&<div style={{color:"#fff",fontSize:15,marginTop:12,textAlign:"center",padding:"0 20px",maxWidth:500,lineHeight:1.5}}>{lightbox.images[lightbox.index].caption}</div>}
+    {/* Dot indicators */}
+    {lightbox.images.length>1&&lightbox.images.length<=12&&<div style={{display:"flex",gap:6,marginTop:16}}>{lightbox.images.map((_,i)=><button key={i} onClick={e=>{e.stopPropagation();setLightbox(p=>({...p,index:i}));}} style={{width:8,height:8,borderRadius:4,border:"none",cursor:"pointer",background:i===lightbox.index?"#fff":"rgba(255,255,255,0.3)"}}/>)}</div>}
+  </div>:null;
   const mobileHeader=bp.mobile?<div style={{padding:"12px 16px 8px"}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}><div style={{display:"flex",alignItems:"center",gap:10}}><img src="/logo-hb.png" alt="HB" style={{height:32,width:"auto"}} onError={e=>{e.target.style.display="none"}}/><div><div style={{fontSize:18,fontWeight:800}}><span style={{color:t.pri}}>Home</span>Baked</div><button onClick={()=>{setChosenSuburb(null);setAddressSearch("");}} style={{fontSize:11,color:t.acc,background:"none",border:"none",cursor:"pointer",padding:0,display:"flex",alignItems:"center",gap:4}}><I d={ic.loc} s={12} c={t.acc}/> {chosenSuburb?.name||"Perth"} · 20km <span style={{color:t.lit,textDecoration:"underline",marginLeft:2}}>Change</span></button></div></div>
     {session?<div style={{width:32,height:32,borderRadius:10,background:t.priL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,cursor:"pointer"}} onClick={()=>{setTab("account");setView(null);}}>{profile?.first_name?.[0]||"?"}</div>:<button onClick={()=>setShowAuth(true)} style={{...s.btnS(true),fontSize:11}}>Sign in</button>}
   </div></div>:null;
@@ -356,7 +374,7 @@ export default function App(){
         {x.gallery?.length>0&&<>
           <div style={{fontWeight:700,fontSize:15,marginTop:20,marginBottom:10}}>Gallery</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
-            {x.gallery.map(img=><div key={img.id} style={{position:"relative",paddingBottom:"100%",borderRadius:12,overflow:"hidden",background:t.bg}}>
+            {x.gallery.map((img,i)=><div key={img.id} onClick={()=>setLightbox({images:x.gallery,index:i})} style={{position:"relative",paddingBottom:"100%",borderRadius:12,overflow:"hidden",background:t.bg,cursor:"pointer"}}>
               <img src={img.image_url} alt={img.caption||""} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>
               {img.caption&&<div style={{position:"absolute",bottom:0,left:0,right:0,padding:"16px 8px 6px",background:"linear-gradient(transparent,rgba(0,0,0,0.6))",color:"#fff",fontSize:11,fontWeight:500}}>{img.caption}</div>}
             </div>)}
@@ -768,7 +786,7 @@ export default function App(){
 
   // ━━━ RENDER ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   return<div style={s.page}>
-    {ToastEl}{authModal}
+    {ToastEl}{authModal}{LightboxEl}
     <NavBar/>
     <div style={s.shell}>
       {view?.type==="seller"?<SellerPage x={view.data}/>
