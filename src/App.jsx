@@ -113,7 +113,7 @@ export default function App(){
 
   // ─── DB Functions ─────────────────────────────────────────────────────────
   async function loadProfile(uid){const{data}=await supabase.from("profiles").select("*").eq("id",uid).single();if(data){setProfile(data);setProfileIncomplete(!data.phone||!data.address||!data.suburb||!data.first_name);}else{setProfile(null);setProfileIncomplete(false);}}
-  async function loadSellers(){const{data}=await supabase.from("profiles").select(`*, menu_items(*)`).neq("suburb","").order("created_at",{ascending:false});if(data)setSellers(data.filter(p=>p.menu_items?.length>0).map(p=>({...p,menu:p.menu_items.filter(m=>m.active),rating:4.5+Math.round(Math.random()*5)/10,reviews:Math.floor(Math.random()*50)+5})));}
+  async function loadSellers(){const{data}=await supabase.from("profiles").select(`*, menu_items(*), gallery_images(*)`).neq("suburb","").order("created_at",{ascending:false});if(data)setSellers(data.filter(p=>p.menu_items?.length>0).map(p=>({...p,menu:p.menu_items.filter(m=>m.active),gallery:p.gallery_images||[],rating:4.5+Math.round(Math.random()*5)/10,reviews:Math.floor(Math.random()*50)+5})));}
   async function geocodeSuburb(suburb,state){
     if(!window.google?.maps)return null;
     try{
@@ -352,6 +352,16 @@ export default function App(){
         <div style={{fontWeight:700,fontSize:15,marginBottom:8}}>Menu</div><div style={{display:"flex",gap:6,overflowX:"auto",marginBottom:12}}>{cats.map(c=><button key={c} onClick={()=>setMc(c)} style={{...s.btnS(mc===c),whiteSpace:"nowrap",flexShrink:0}}>{c}</button>)}</div>
         <div style={s.menuGrid}>{items.map(item=><div key={item.id} style={s.card}><div style={{padding:14}}><div style={{display:"flex",gap:12}}><div style={{width:68,height:68,borderRadius:12,background:"#fef3c7",display:"flex",alignItems:"center",justifyContent:"center",fontSize:34,flexShrink:0}}>{item.emoji}</div>
           <div style={{flex:1}}><div style={{fontWeight:600,fontSize:14,marginBottom:2}}>{item.name}</div><div style={{fontSize:12,color:t.mut,lineHeight:1.5,marginBottom:4}}>{item.description}</div>{item.allergens?.length>0&&<div style={{marginBottom:4}}>{item.allergens.map(a=><span key={a} style={s.tag}>⚠ {a}</span>)}</div>}<div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontWeight:700,fontSize:17,color:t.pri}}>${item.price}</span><button onClick={e=>{e.stopPropagation();addCart(x,item);}} style={s.btnS(true)}>+ Add</button></div></div></div></div></div>)}</div>
+        
+        {x.gallery?.length>0&&<>
+          <div style={{fontWeight:700,fontSize:15,marginTop:20,marginBottom:10}}>Gallery</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+            {x.gallery.map(img=><div key={img.id} style={{position:"relative",paddingBottom:"100%",borderRadius:12,overflow:"hidden",background:t.bg}}>
+              <img src={img.image_url} alt={img.caption||""} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>
+              {img.caption&&<div style={{position:"absolute",bottom:0,left:0,right:0,padding:"16px 8px 6px",background:"linear-gradient(transparent,rgba(0,0,0,0.6))",color:"#fff",fontSize:11,fontWeight:500}}>{img.caption}</div>}
+            </div>)}
+          </div>
+        </>}
       </div></>;
   };
 
@@ -376,9 +386,17 @@ export default function App(){
     const[myMenu,setMyMenu]=useState([]);const[addingItem,setAddingItem]=useState(false);const[agreed,setAgreed]=useState(false);const[saving,setSaving]=useState(false);
     const[editingStore,setEditingStore]=useState(false);const[storeForm,setStoreForm]=useState(null);
     const[uploadingPhoto,setUploadingPhoto]=useState(false);const[photoPreview,setPhotoPreview]=useState(null);
+    const[myGallery,setMyGallery]=useState([]);const[uploadingGallery,setUploadingGallery]=useState(false);const[galleryCaption,setGalleryCaption]=useState("");
     const fileInputRef=useRef(null);
+    const galleryInputRef=useRef(null);
     const formW={maxWidth:560,margin:"0 auto"};
-    useEffect(()=>{loadMyMenu().then(setMyMenu);},[profile]);
+    useEffect(()=>{loadMyMenu().then(setMyMenu);loadMyGallery();},[profile]);
+
+    const loadMyGallery=async()=>{if(!session?.user)return;const{data}=await supabase.from("gallery_images").select("*").eq("seller_id",session.user.id).order("created_at",{ascending:false});setMyGallery(data||[]);};
+
+    const handleGalleryUpload=async(e)=>{const file=e.target.files?.[0];if(!file)return;if(file.size>5*1024*1024){showToast("Image must be under 5MB");return;}setUploadingGallery(true);const ext=file.name.split(".").pop();const path=`${session.user.id}/${Date.now()}.${ext}`;const{error}=await supabase.storage.from("gallery").upload(path,file);if(error){showToast("Upload failed");setUploadingGallery(false);return;}const{data:urlData}=supabase.storage.from("gallery").getPublicUrl(path);if(urlData?.publicUrl){await supabase.from("gallery_images").insert({seller_id:session.user.id,image_url:urlData.publicUrl,caption:galleryCaption});setGalleryCaption("");loadMyGallery();await loadSellers();}setUploadingGallery(false);showToast("Photo added to gallery!");if(galleryInputRef.current)galleryInputRef.current.value="";};
+
+    const deleteGalleryImage=async(img)=>{await supabase.from("gallery_images").delete().eq("id",img.id);const path=img.image_url.split("/gallery/")[1]?.split("?")[0];if(path)await supabase.storage.from("gallery").remove([path]);loadMyGallery();await loadSellers();showToast("Photo removed");};
 
     const handlePhotoUpload=async(e)=>{const file=e.target.files?.[0];if(!file)return;if(file.size>2*1024*1024){showToast("Max 2MB");return;}setUploadingPhoto(true);const reader=new FileReader();reader.onload=ev=>setPhotoPreview(ev.target.result);reader.readAsDataURL(file);const ext=file.name.split(".").pop();const path=`shop-icons/${session.user.id}.${ext}`;let{error}=await supabase.storage.from("shop-images").upload(path,file,{upsert:true});if(error){await supabase.storage.createBucket("shop-images",{public:true});await supabase.storage.from("shop-images").upload(path,file,{upsert:true});}const{data:urlData}=supabase.storage.from("shop-images").getPublicUrl(path);if(urlData?.publicUrl){await supabase.from("profiles").update({shop_image_url:urlData.publicUrl+"?t="+Date.now()}).eq("id",session.user.id);setStoreForm(p=>({...p,shop_image_url:urlData.publicUrl}));}setUploadingPhoto(false);showToast("Photo uploaded!");};
 
@@ -413,6 +431,31 @@ export default function App(){
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",margin:"16px 0 10px"}}><span style={{fontWeight:700,fontSize:15}}>Menu ({myMenu.length})</span><button style={s.btnS(true)} onClick={()=>{setMf({name:"",cat:"Cakes",price:"",desc:"",allergens:[],emoji:"🍰"});setAddingItem(true);}}>+ Add Item</button></div>
       {myMenu.map(item=><div key={item.id} style={{...s.card,padding:12,marginBottom:8}}><div style={{display:"flex",gap:10,alignItems:"center"}}><div style={{width:44,height:44,borderRadius:10,background:"#fef3c7",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{item.emoji}</div><div style={{flex:1}}><div style={{fontWeight:600,fontSize:13}}>{item.name}</div><div style={{fontSize:11,color:t.mut}}>{item.category} · ${Number(item.price).toFixed(2)}</div></div><button onClick={async()=>{await supabase.from("menu_items").update({active:false}).eq("id",item.id);const{data}=await supabase.from("menu_items").select("*").eq("seller_id",session.user.id).eq("active",true);setMyMenu(data||[]);await loadSellers();showToast("Item removed");}} style={{background:"none",border:"none",cursor:"pointer",color:t.no,padding:4}}><I d={ic.trash} s={16}/></button></div></div>)}
       {myMenu.length===0&&<div style={{textAlign:"center",padding:30,color:t.mut}}><div style={{fontSize:32,marginBottom:8}}>🍰</div>No items yet</div>}
+
+      {/* Gallery Section */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",margin:"24px 0 10px"}}><span style={{fontWeight:700,fontSize:15}}>Gallery ({myGallery.length})</span></div>
+      <div style={{...s.tip,background:"#eff6ff",color:"#1e40af",marginBottom:12}}>Show off your creations! Photos appear on your public store page.</div>
+      
+      {/* Upload area */}
+      <div style={{...s.card,padding:16,marginBottom:12}}>
+        <div style={{marginBottom:10}}>
+          <input style={s.inp} placeholder="Caption (optional)" value={galleryCaption} onChange={e=>setGalleryCaption(e.target.value)}/>
+        </div>
+        <button onClick={()=>galleryInputRef.current?.click()} style={{...s.btn(false),display:"flex",alignItems:"center",justifyContent:"center",gap:8,position:"relative"}}>
+          {uploadingGallery?<span>Uploading...</span>:<><I d={ic.cam} s={18}/> Add Photo</>}
+        </button>
+        <input ref={galleryInputRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleGalleryUpload}/>
+        <div style={{fontSize:11,color:t.mut,marginTop:6,textAlign:"center"}}>JPG or PNG · Max 5MB</div>
+      </div>
+
+      {/* Gallery grid */}
+      {myGallery.length>0&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:16}}>
+        {myGallery.map(img=><div key={img.id} style={{position:"relative",paddingBottom:"100%",borderRadius:12,overflow:"hidden",background:t.bg}}>
+          <img src={img.image_url} alt={img.caption||""} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>
+          {img.caption&&<div style={{position:"absolute",bottom:0,left:0,right:0,padding:"16px 8px 6px",background:"linear-gradient(transparent,rgba(0,0,0,0.6))",color:"#fff",fontSize:10,fontWeight:500}}>{img.caption}</div>}
+          <button onClick={()=>deleteGalleryImage(img)} style={{position:"absolute",top:6,right:6,width:24,height:24,borderRadius:12,background:"rgba(0,0,0,0.6)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><I d={ic.x} s={12} c="#fff"/></button>
+        </div>)}
+      </div>}
     </div></>;
   };
 
