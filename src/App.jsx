@@ -389,7 +389,22 @@ export default function App(){
   const Sell=()=>{
     const[f,setF]=useState({name:"",suburb:"",state:"WA",bio:"",delivery:true,pickup:true});
     const[mf,setMf]=useState({name:"",cat:"Cakes",price:"",desc:"",allergens:[],emoji:"🍰"});
-    const[myMenu,setMyMenu]=useState([]);const[addingItem,setAddingItem]=useState(false);const[agreed,setAgreed]=useState(false);const[saving,setSaving]=useState(false);
+    const[myMenu,setMyMenu]=useState([]);
+    const[addingItem,setAddingItem]=useState(false);
+    const[agreed,setAgreed]=useState(false);
+    const[saving,setSaving]=useState(false);
+    const[editingStore,setEditingStore]=useState(false);
+    const[storeForm,setStoreForm]=useState(null);
+    const[uploadingPhoto,setUploadingPhoto]=useState(false);
+    const[photoPreview,setPhotoPreview]=useState(null);
+    const[myGallery,setMyGallery]=useState([]);
+    const[uploadingGallery,setUploadingGallery]=useState(false);
+    const[galleryCaption,setGalleryCaption]=useState("");
+    const fileInputRef=useRef(null);
+    const galleryInputRef=useRef(null);
+    const formW={maxWidth:560,margin:"0 auto"};
+
+    useEffect(()=>{if(profile){loadMyMenu().then(setMyMenu);loadMyGallery();}},[profile]);const[addingItem,setAddingItem]=useState(false);const[agreed,setAgreed]=useState(false);const[saving,setSaving]=useState(false);
     const[editingStore,setEditingStore]=useState(false);const[storeForm,setStoreForm]=useState(null);
     const[uploadingPhoto,setUploadingPhoto]=useState(false);const[photoPreview,setPhotoPreview]=useState(null);
     const[myGallery,setMyGallery]=useState([]);const[uploadingGallery,setUploadingGallery]=useState(false);const[galleryCaption,setGalleryCaption]=useState("");
@@ -486,10 +501,12 @@ export default function App(){
     const[disputeReason,setDisputeReason]=useState("");
     const[disputeDesc,setDisputeDesc]=useState("");
     const[disputeSubmitting,setDisputeSubmitting]=useState(false);
+    const[notifPrefs,setNotifPrefs]=useState(null);
+    const[notifSaving,setNotifSaving]=useState(false);
     const msgEndRef=useRef(null);
 
     useEffect(()=>{
-      loadOrders();loadUnread();
+      loadOrders();loadUnread();loadNotifPrefs();
     },[]);
 
     useEffect(()=>{if(activeOrder)loadMessages(activeOrder.id);},[activeOrder]);
@@ -511,6 +528,22 @@ export default function App(){
     const loadUnread=async()=>{
       const{count}=await supabase.from("messages").select("*",{count:"exact",head:true}).eq("receiver_id",session.user.id).eq("read",false);
       setUnreadCount(count||0);
+    };
+
+    const loadNotifPrefs=async()=>{
+      const{data}=await supabase.from("notification_prefs").select("*").eq("id",session.user.id).single();
+      if(data)setNotifPrefs(data);
+      else{
+        await supabase.from("notification_prefs").insert({id:session.user.id});
+        setNotifPrefs({email_new_order:true,email_order_update:true,email_new_message:true,email_dispute:true,email_marketing:false});
+      }
+    };
+
+    const updateNotifPref=async(key,value)=>{
+      setNotifPrefs(p=>({...p,[key]:value}));
+      setNotifSaving(true);
+      await supabase.from("notification_prefs").update({[key]:value,updated_at:new Date().toISOString()}).eq("id",session.user.id);
+      setNotifSaving(false);
     };
 
     const sendMessage=async()=>{
@@ -616,7 +649,7 @@ export default function App(){
     }
 
     // ─── Main Account Page ──────────────────────────────────────────────
-    const acctTabs=[{id:"menu",label:"Overview"},{id:"purchases",label:"Purchases"},{id:"messages",label:`Messages${unreadCount?` (${unreadCount})`:""}`}];
+    const acctTabs=[{id:"menu",label:"Overview"},{id:"purchases",label:"Purchases"},{id:"messages",label:`Messages${unreadCount?` (${unreadCount})`:""}`},{id:"settings",label:"Settings"}];
 
     const myPurchases=orders.filter(o=>o.buyer_id===session.user.id);
     const mySales=orders.filter(o=>o.seller_id===session.user.id);
@@ -662,7 +695,6 @@ export default function App(){
             <div style={{fontSize:12,color:t.mut,marginBottom:4}}>App version</div>
             <div style={{fontWeight:600,fontSize:14}}>HomeBaked v0.3.0</div>
           </div>
-          {bp.mobile&&<button style={{...s.btn(false),display:"flex",alignItems:"center",justifyContent:"center",gap:8,color:t.no,marginTop:16}} onClick={handleLogout}><I d={ic.logout} s={16} c={t.no}/> Sign Out</button>}
         </>}
 
         {/* Purchases tab */}
@@ -757,6 +789,49 @@ export default function App(){
               </div>
             </div>;
           })}
+        </>}
+
+        {/* Settings tab */}
+        {acctTab==="settings"&&<>
+          <div style={{...s.card,padding:20,marginBottom:16}}>
+            <div style={{fontWeight:700,fontSize:16,marginBottom:4}}>Email Notifications</div>
+            <div style={{fontSize:13,color:t.mut,marginBottom:16}}>Choose which emails you'd like to receive. {notifSaving&&<span style={{color:t.acc}}>Saving...</span>}</div>
+
+            {notifPrefs&&<div style={{display:"flex",flexDirection:"column",gap:4}}>
+              {[
+                {key:"email_new_order",label:"New orders",desc:"Get notified when someone places an order from your kitchen",icon:"🛒"},
+                {key:"email_order_update",label:"Order updates",desc:"Status changes on your purchases (confirmed, ready, etc)",icon:"📦"},
+                {key:"email_new_message",label:"New messages",desc:"When a buyer or seller sends you a message",icon:"💬"},
+                {key:"email_dispute",label:"Disputes & issues",desc:"When a buyer reports an issue with your order",icon:"⚠️"},
+                {key:"email_marketing",label:"Tips & updates",desc:"Baking tips, new features, and HomeBaked news",icon:"📰"},
+              ].map(pref=><label key={pref.key} style={{display:"flex",alignItems:"center",gap:12,padding:"14px 0",borderBottom:`1px solid ${t.bdr}`,cursor:"pointer"}}>
+                <div style={{position:"relative",width:44,height:24,borderRadius:12,background:notifPrefs[pref.key]?t.ok:t.bdr,transition:"background 0.2s",flexShrink:0}} onClick={()=>updateNotifPref(pref.key,!notifPrefs[pref.key])}>
+                  <div style={{position:"absolute",top:2,left:notifPrefs[pref.key]?22:2,width:20,height:20,borderRadius:10,background:"#fff",boxShadow:"0 1px 3px rgba(0,0,0,0.2)",transition:"left 0.2s"}}/>
+                  <input type="checkbox" checked={notifPrefs[pref.key]} onChange={()=>{}} style={{display:"none"}}/>
+                </div>
+                <div style={{flex:1}}>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}><span style={{fontSize:16}}>{pref.icon}</span><span style={{fontWeight:600,fontSize:14}}>{pref.label}</span></div>
+                  <div style={{fontSize:12,color:t.mut,marginTop:2}}>{pref.desc}</div>
+                </div>
+              </label>)}
+            </div>}
+          </div>
+
+          <div style={{...s.tip,background:"#eff6ff",color:"#1e40af",marginBottom:16}}>
+            Email notifications will be sent to <strong>{session.user.email}</strong>. Push notifications are coming soon!
+          </div>
+
+          <div style={{...s.card,padding:20,marginBottom:16}}>
+            <div style={{fontWeight:700,fontSize:16,marginBottom:12}}>Account</div>
+            <button onClick={()=>{setEpFirst(profile?.first_name||"");setEpLast(profile?.last_name||"");setEpPhone(profile?.phone||"");setEpAddress(profile?.address||"");setEpSuburb(profile?.suburb||"");setEpState(profile?.state||"WA");setEpPostcode(profile?.postcode||"");setEditingProfile(true);}} style={{...s.btn(false),marginBottom:8,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}><I d={ic.edit} s={16}/> Edit Profile</button>
+            {bp.mobile&&<button style={{...s.btn(false),display:"flex",alignItems:"center",justifyContent:"center",gap:8,color:t.no}} onClick={handleLogout}><I d={ic.logout} s={16} c={t.no}/> Sign Out</button>}
+          </div>
+
+          <div style={{...s.card,padding:20}}>
+            <div style={{fontWeight:700,fontSize:16,marginBottom:4,color:t.no}}>Danger zone</div>
+            <div style={{fontSize:13,color:t.mut,marginBottom:12}}>Permanently delete your account and all associated data.</div>
+            <button onClick={()=>{if(window.confirm("Are you sure you want to delete your account? This cannot be undone.")){showToast("Please contact support@homebaked.com.au to delete your account");}}} style={{padding:"10px 16px",borderRadius:t.rs,border:`1.5px solid ${t.no}`,background:"transparent",color:t.no,fontWeight:600,fontSize:13,cursor:"pointer"}}>Delete Account</button>
+          </div>
         </>}
       </div>
     </>;
