@@ -417,7 +417,218 @@ export default function App(){
   };
 
   // ─── Account ──────────────────────────────────────────────────────────────
-  const Account=()=><>{mobileHeader}<div style={s.hdr}><span style={s.hdrT}>Account</span></div><div style={{...s.sec,maxWidth:500,margin:"0 auto"}}><div style={{...s.card,padding:20}}><div style={{display:"flex",gap:14,alignItems:"center",marginBottom:16}}><div style={{width:56,height:56,borderRadius:16,background:t.priL,display:"flex",alignItems:"center",justifyContent:"center"}}><I d={ic.user} s={24} c={t.pri}/></div><div><div style={{fontWeight:700,fontSize:17}}>{profile?.name||"User"}</div><div style={{fontSize:13,color:t.mut}}>{session.user.email}</div></div></div>{bp.mobile&&<button style={{...s.btn(false),display:"flex",alignItems:"center",justifyContent:"center",gap:8,color:t.no}} onClick={handleLogout}><I d={ic.logout} s={16} c={t.no}/> Sign Out</button>}</div></div></>;
+  const Account=()=>{
+    const[acctTab,setAcctTab]=useState("menu");
+    const[orders,setOrders]=useState([]);
+    const[messages,setMessages]=useState([]);
+    const[msgInput,setMsgInput]=useState("");
+    const[activeOrder,setActiveOrder]=useState(null);
+    const[editingProfile,setEditingProfile]=useState(false);
+    const[epFirst,setEpFirst]=useState(profile?.first_name||"");
+    const[epLast,setEpLast]=useState(profile?.last_name||"");
+    const[epPhone,setEpPhone]=useState(profile?.phone||"");
+    const[epAddress,setEpAddress]=useState(profile?.address||"");
+    const[epSuburb,setEpSuburb]=useState(profile?.suburb||"");
+    const[epState,setEpState]=useState(profile?.state||"WA");
+    const[epPostcode,setEpPostcode]=useState(profile?.postcode||"");
+    const[epSaving,setEpSaving]=useState(false);
+    const[unreadCount,setUnreadCount]=useState(0);
+    const msgEndRef=useRef(null);
+
+    useEffect(()=>{
+      loadOrders();loadUnread();
+    },[]);
+
+    useEffect(()=>{if(activeOrder)loadMessages(activeOrder.id);},[activeOrder]);
+    useEffect(()=>{msgEndRef.current?.scrollIntoView({behavior:"smooth"});},[messages]);
+
+    const loadOrders=async()=>{
+      const{data}=await supabase.from("orders").select(`*,order_items(*),buyer:profiles!orders_buyer_id_fkey(name,suburb),seller:profiles!orders_seller_id_fkey(name,suburb,avatar_emoji,shop_image_url)`).or(`buyer_id.eq.${session.user.id},seller_id.eq.${session.user.id}`).order("created_at",{ascending:false});
+      setOrders(data||[]);
+    };
+
+    const loadMessages=async(orderId)=>{
+      const{data}=await supabase.from("messages").select("*").eq("order_id",orderId).order("created_at",{ascending:true});
+      setMessages(data||[]);
+      // Mark received messages as read
+      await supabase.from("messages").update({read:true}).eq("order_id",orderId).eq("receiver_id",session.user.id).eq("read",false);
+      loadUnread();
+    };
+
+    const loadUnread=async()=>{
+      const{count}=await supabase.from("messages").select("*",{count:"exact",head:true}).eq("receiver_id",session.user.id).eq("read",false);
+      setUnreadCount(count||0);
+    };
+
+    const sendMessage=async()=>{
+      if(!msgInput.trim()||!activeOrder)return;
+      const receiverId=activeOrder.buyer_id===session.user.id?activeOrder.seller_id:activeOrder.buyer_id;
+      await supabase.from("messages").insert({order_id:activeOrder.id,sender_id:session.user.id,receiver_id:receiverId,body:msgInput.trim()});
+      setMsgInput("");
+      loadMessages(activeOrder.id);
+    };
+
+    // ─── Message Thread View ────────────────────────────────────────────
+    if(activeOrder){
+      const isBuyer=activeOrder.buyer_id===session.user.id;
+      const otherParty=isBuyer?activeOrder.seller:activeOrder.buyer;
+      return<>{mobileHeader}<div style={s.hdr}><button style={s.bck} onClick={()=>setActiveOrder(null)}><I d={ic.back}/></button><span style={s.hdrT}>Chat with {otherParty?.name||"Seller"}</span></div>
+        <div style={{...s.sec,maxWidth:600,margin:"0 auto"}}>
+          <div style={{...s.card,padding:12,marginBottom:12}}><div style={{fontSize:12,color:t.mut}}>Order #{activeOrder.id.slice(0,8)} · {activeOrder.method==="pickup"?"📦 Pickup":"🚗 Delivery"} · ${Number(activeOrder.total).toFixed(2)}</div></div>
+          <div style={{minHeight:300,maxHeight:400,overflowY:"auto",marginBottom:12,padding:4}}>
+            {messages.length===0&&<div style={{textAlign:"center",padding:40,color:t.mut}}><div style={{fontSize:32,marginBottom:8}}>💬</div><div style={{fontSize:13}}>No messages yet. Start the conversation!</div></div>}
+            {messages.map(m=>{const mine=m.sender_id===session.user.id;return<div key={m.id} style={{display:"flex",justifyContent:mine?"flex-end":"flex-start",marginBottom:8}}>
+              <div style={{maxWidth:"75%",padding:"10px 14px",borderRadius:16,borderBottomRightRadius:mine?4:16,borderBottomLeftRadius:mine?16:4,background:mine?t.pri:"#e7e5e4",color:mine?"#fff":t.txt,fontSize:14,lineHeight:1.5}}>
+                {m.body}
+                <div style={{fontSize:10,marginTop:4,opacity:0.7,textAlign:mine?"right":"left"}}>{new Date(m.created_at).toLocaleString("en-AU",{hour:"numeric",minute:"2-digit",day:"numeric",month:"short"})}</div>
+              </div>
+            </div>;})}
+            <div ref={msgEndRef}/>
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <input style={{...s.inp,flex:1}} placeholder="Type a message..." value={msgInput} onChange={e=>setMsgInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")sendMessage();}}/>
+            <button onClick={sendMessage} style={{...s.btnS(true),padding:"12px 20px",flexShrink:0}}>Send</button>
+          </div>
+        </div>
+      </>;
+    }
+
+    // ─── Edit Profile View ──────────────────────────────────────────────
+    if(editingProfile){
+      return<>{mobileHeader}<div style={s.hdr}><button style={s.bck} onClick={()=>setEditingProfile(false)}><I d={ic.back}/></button><span style={s.hdrT}>Edit Profile</span></div>
+        <div style={{...s.sec,maxWidth:500,margin:"0 auto"}}>
+          <div style={{display:"flex",gap:8,marginBottom:12}}><div style={{flex:1}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>First name *</label><input style={s.inp} value={epFirst} onChange={e=>setEpFirst(e.target.value)}/></div><div style={{flex:1}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Last name *</label><input style={s.inp} value={epLast} onChange={e=>setEpLast(e.target.value)}/></div></div>
+          <div style={{marginBottom:12}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Email</label><input style={{...s.inp,background:t.bg,color:t.mut}} value={session.user.email} disabled/></div>
+          <div style={{marginBottom:12}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Phone *</label><input style={s.inp} type="tel" value={epPhone} onChange={e=>setEpPhone(e.target.value)}/></div>
+          <div style={{marginBottom:12}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Street address *</label><input style={s.inp} value={epAddress} onChange={e=>setEpAddress(e.target.value)}/></div>
+          <div style={{display:"flex",gap:8,marginBottom:16}}>
+            <div style={{flex:2}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Suburb *</label><input style={s.inp} value={epSuburb} onChange={e=>setEpSuburb(e.target.value)}/></div>
+            <div style={{flex:1}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>State</label><select style={s.sel} value={epState} onChange={e=>setEpState(e.target.value)}>{["WA","NSW","VIC","QLD","SA","TAS","NT","ACT"].map(x=><option key={x}>{x}</option>)}</select></div>
+            <div style={{flex:1}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Postcode</label><input style={s.inp} value={epPostcode} onChange={e=>setEpPostcode(e.target.value)}/></div>
+          </div>
+          <button style={{...s.btn(true),opacity:epSaving?.5:1}} disabled={epSaving} onClick={async()=>{
+            if(!epFirst||!epLast||!epPhone||!epSuburb){showToast("Please fill in all fields");return;}
+            setEpSaving(true);
+            await supabase.from("profiles").update({first_name:epFirst,last_name:epLast,phone:epPhone,address:epAddress,suburb:epSuburb,state:epState,postcode:epPostcode}).eq("id",session.user.id);
+            await loadProfile(session.user.id);
+            setEpSaving(false);setEditingProfile(false);showToast("Profile updated!");
+          }}>{epSaving?"Saving...":"Save Changes"}</button>
+        </div>
+      </>;
+    }
+
+    // ─── Main Account Page ──────────────────────────────────────────────
+    const acctTabs=[{id:"menu",label:"Overview"},{id:"purchases",label:"Purchases"},{id:"messages",label:`Messages${unreadCount?` (${unreadCount})`:""}`}];
+
+    const myPurchases=orders.filter(o=>o.buyer_id===session.user.id);
+    const mySales=orders.filter(o=>o.seller_id===session.user.id);
+
+    return<>{mobileHeader}<div style={s.hdr}><span style={s.hdrT}>Account</span></div>
+      <div style={{...s.sec,maxWidth:600,margin:"0 auto"}}>
+        {/* Profile card */}
+        <div style={{...s.card,padding:20,marginBottom:16}}>
+          <div style={{display:"flex",gap:14,alignItems:"center",marginBottom:12}}>
+            <div style={{width:56,height:56,borderRadius:16,background:t.priL,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>
+              {profile?.shop_image_url?<img src={profile.shop_image_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<I d={ic.user} s={24} c={t.pri}/>}
+            </div>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:700,fontSize:17}}>{profile?.first_name} {profile?.last_name}</div>
+              <div style={{fontSize:13,color:t.mut}}>{session.user.email}</div>
+              {profile?.suburb&&<div style={{fontSize:12,color:t.lit}}>{profile.suburb}, {profile.state}</div>}
+            </div>
+          </div>
+
+          {/* Quick links */}
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            <button onClick={()=>{setTab("sell");setView(null);}} style={{...s.btnS(false),display:"flex",alignItems:"center",gap:5,flex:1,justifyContent:"center"}}><I d={ic.store} s={14}/> My Kitchen</button>
+            <button onClick={()=>{setEpFirst(profile?.first_name||"");setEpLast(profile?.last_name||"");setEpPhone(profile?.phone||"");setEpAddress(profile?.address||"");setEpSuburb(profile?.suburb||"");setEpState(profile?.state||"WA");setEpPostcode(profile?.postcode||"");setEditingProfile(true);}} style={{...s.btnS(false),display:"flex",alignItems:"center",gap:5,flex:1,justifyContent:"center"}}><I d={ic.edit} s={14}/> Edit Profile</button>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div style={{display:"flex",gap:4,marginBottom:16}}>
+          {acctTabs.map(at=><button key={at.id} onClick={()=>setAcctTab(at.id)} style={{...s.btnS(acctTab===at.id),flex:1,textAlign:"center"}}>{at.label}</button>)}
+        </div>
+
+        {/* Overview tab */}
+        {acctTab==="menu"&&<>
+          <div style={{...s.card,padding:16,marginBottom:12}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><span style={{fontWeight:600,fontSize:14}}>Your Stats</span></div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
+              <div style={{textAlign:"center"}}><div style={{fontSize:24,fontWeight:700,color:t.pri}}>{myPurchases.length}</div><div style={{fontSize:11,color:t.mut}}>Purchases</div></div>
+              <div style={{textAlign:"center"}}><div style={{fontSize:24,fontWeight:700,color:t.pri}}>{mySales.length}</div><div style={{fontSize:11,color:t.mut}}>Sales</div></div>
+              <div style={{textAlign:"center"}}><div style={{fontSize:24,fontWeight:700,color:t.pri}}>{unreadCount}</div><div style={{fontSize:11,color:t.mut}}>Unread</div></div>
+            </div>
+          </div>
+          <div style={{...s.card,padding:16}}>
+            <div style={{fontSize:12,color:t.mut,marginBottom:4}}>App version</div>
+            <div style={{fontWeight:600,fontSize:14}}>HomeBaked v0.3.0</div>
+          </div>
+          {bp.mobile&&<button style={{...s.btn(false),display:"flex",alignItems:"center",justifyContent:"center",gap:8,color:t.no,marginTop:16}} onClick={handleLogout}><I d={ic.logout} s={16} c={t.no}/> Sign Out</button>}
+        </>}
+
+        {/* Purchases tab */}
+        {acctTab==="purchases"&&<>
+          {myPurchases.length===0&&<div style={{textAlign:"center",padding:40,color:t.mut}}><div style={{fontSize:40,marginBottom:8}}>🛒</div><div style={{fontWeight:600}}>No purchases yet</div><div style={{fontSize:13,marginTop:4}}>Browse local bakers and place your first order!</div></div>}
+          {myPurchases.map(o=><div key={o.id} style={{...s.card,padding:16,marginBottom:10}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+              <div style={{display:"flex",gap:10,alignItems:"center"}}>
+                <div style={{width:40,height:40,borderRadius:10,background:t.priL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,overflow:"hidden"}}>{o.seller?.shop_image_url?<img src={o.seller.shop_image_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:(o.seller?.avatar_emoji||"🍰")}</div>
+                <div><div style={{fontWeight:600,fontSize:14}}>{o.seller?.name||"Seller"}</div><div style={{fontSize:11,color:t.mut}}>{o.seller?.suburb}</div></div>
+              </div>
+              <div style={{textAlign:"right"}}><div style={{fontWeight:700,color:t.pri}}>${Number(o.total).toFixed(2)}</div><div style={{fontSize:11,color:t.mut}}>{o.method==="pickup"?"📦":"🚗"} {o.method}</div></div>
+            </div>
+            <div style={{fontSize:12,color:t.mut,marginBottom:8}}>{o.order_items?.map(oi=>`${oi.quantity}x ${oi.item_name}`).join(", ")}</div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <span style={{...s.badge(o.status==="completed"?t.okBg:o.status==="cancelled"?"#fef2f2":"#fefce8",o.status==="completed"?"#166534":o.status==="cancelled"?t.no:"#854d0e")}}>{o.status}</span>
+              <div style={{display:"flex",gap:6}}>
+                <button onClick={()=>{setActiveOrder(o);}} style={{...s.btnS(false),display:"flex",alignItems:"center",gap:4,fontSize:11}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Message</button>
+              </div>
+            </div>
+            <div style={{fontSize:10,color:t.lit,marginTop:6}}>{new Date(o.created_at).toLocaleString("en-AU",{day:"numeric",month:"short",year:"numeric",hour:"numeric",minute:"2-digit"})}</div>
+          </div>)}
+
+          {mySales.length>0&&<>
+            <div style={{fontWeight:700,fontSize:15,margin:"20px 0 10px"}}>Sales (as seller)</div>
+            {mySales.map(o=><div key={o.id} style={{...s.card,padding:16,marginBottom:10}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                <div><div style={{fontWeight:600,fontSize:14}}>Order from {o.buyer?.name||"Buyer"}</div><div style={{fontSize:11,color:t.mut}}>{o.buyer?.suburb}</div></div>
+                <div style={{textAlign:"right"}}><div style={{fontWeight:700,color:t.ok}}>${Number(o.total).toFixed(2)}</div><div style={{fontSize:11,color:t.mut}}>{o.method==="pickup"?"📦":"🚗"} {o.method}</div></div>
+              </div>
+              <div style={{fontSize:12,color:t.mut,marginBottom:8}}>{o.order_items?.map(oi=>`${oi.quantity}x ${oi.item_name}`).join(", ")}</div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <span style={{...s.badge(o.status==="completed"?t.okBg:o.status==="cancelled"?"#fef2f2":"#fefce8",o.status==="completed"?"#166534":o.status==="cancelled"?t.no:"#854d0e")}}>{o.status}</span>
+                <button onClick={()=>setActiveOrder(o)} style={{...s.btnS(false),display:"flex",alignItems:"center",gap:4,fontSize:11}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Message</button>
+              </div>
+              <div style={{fontSize:10,color:t.lit,marginTop:6}}>{new Date(o.created_at).toLocaleString("en-AU",{day:"numeric",month:"short",year:"numeric",hour:"numeric",minute:"2-digit"})}</div>
+            </div>)}
+          </>}
+        </>}
+
+        {/* Messages tab */}
+        {acctTab==="messages"&&<>
+          {orders.length===0&&<div style={{textAlign:"center",padding:40,color:t.mut}}><div style={{fontSize:40,marginBottom:8}}>💬</div><div style={{fontWeight:600}}>No conversations yet</div><div style={{fontSize:13,marginTop:4}}>Messages will appear here after you place or receive an order.</div></div>}
+          {orders.map(o=>{
+            const isBuyer=o.buyer_id===session.user.id;
+            const other=isBuyer?o.seller:o.buyer;
+            return<div key={o.id} style={{...s.card,padding:14,marginBottom:8,cursor:"pointer"}} onClick={()=>setActiveOrder(o)}>
+              <div style={{display:"flex",gap:10,alignItems:"center"}}>
+                <div style={{width:44,height:44,borderRadius:12,background:t.priL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,overflow:"hidden",flexShrink:0}}>{other?.shop_image_url?<img src={other.shop_image_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:(other?.avatar_emoji||"🍰")}</div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontWeight:600,fontSize:14}}>{other?.name||"User"}</div>
+                  <div style={{fontSize:12,color:t.mut,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>Order #{o.id.slice(0,8)} · ${Number(o.total).toFixed(2)} · {o.order_items?.map(oi=>oi.item_name).join(", ")}</div>
+                </div>
+                <div style={{textAlign:"right",flexShrink:0}}>
+                  <div style={{fontSize:11,color:t.lit}}>{new Date(o.created_at).toLocaleDateString("en-AU",{day:"numeric",month:"short"})}</div>
+                  <span style={{fontSize:11,color:isBuyer?t.pri:t.ok}}>{isBuyer?"Purchased":"Sold"}</span>
+                </div>
+              </div>
+            </div>;
+          })}
+        </>}
+      </div>
+    </>;
+  };
 
   // ─── Menu Item Form ───────────────────────────────────────────────────────
   const MenuItemForm=({mf,setMf,s:_s})=><>
