@@ -345,10 +345,7 @@ export default function App(){
 
   // ─── Seller Page ──────────────────────────────────────────────────────────
   const SellerPage=({x})=>{const[mc,setMc]=useState("All");const cats=["All",...new Set(x.menu.map(m=>m.category))];const items=mc==="All"?x.menu:x.menu.filter(m=>m.category===mc);
-    const[isFav,setIsFav]=useState(false);
-    useEffect(()=>{if(session?.user){supabase.from("favourites").select("id").eq("user_id",session.user.id).eq("seller_id",x.id).then(({data})=>setIsFav(data?.length>0));}},[x.id]);
-    const toggleFav=async()=>{if(!requireAuth("browse"))return;if(isFav){await supabase.from("favourites").delete().eq("user_id",session.user.id).eq("seller_id",x.id);setIsFav(false);showToast("Removed from favourites");}else{await supabase.from("favourites").insert({user_id:session.user.id,seller_id:x.id});setIsFav(true);showToast("Added to favourites ❤️");}};
-    return<>{mobileHeader}<div style={s.hdr}><button style={s.bck} onClick={back}><I d={ic.back}/></button><span style={s.hdrT}>{x.name}</span><button onClick={toggleFav} style={{background:"none",border:"none",cursor:"pointer",fontSize:22,padding:4}}>{isFav?"❤️":"🤍"}</button></div>
+    return<>{mobileHeader}<div style={s.hdr}><button style={s.bck} onClick={back}><I d={ic.back}/></button><span style={s.hdrT}>{x.name}</span></div>
       <div style={s.sec}><div style={{...s.card,padding:bp.mobile?18:24,marginBottom:16}}><div style={{display:"flex",gap:14,alignItems:"center",marginBottom:10}}><div style={{width:bp.mobile?60:72,height:bp.mobile?60:72,borderRadius:18,background:t.priL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:bp.mobile?30:36,overflow:"hidden"}}>{x.shop_image_url?<img src={x.shop_image_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:(x.avatar_emoji||"🍰")}</div>
         <div><div style={{fontWeight:700,fontSize:bp.mobile?17:20}}>{x.name}</div><div style={{fontSize:13,color:t.mut}}>{x.suburb}, {x.state}{x.dist<999?` · ${x.dist}km`:""}</div><Stars r={x.rating}/> <span style={{fontSize:11,color:t.lit}}>({x.reviews} reviews)</span></div></div>
         <p style={{fontSize:14,color:t.mut,lineHeight:1.6,margin:"0 0 10px"}}>{x.bio}</p><div style={{display:"flex",gap:5}}>{x.pickup&&<span style={s.badge(t.okBg,"#166534")}>📦 Pickup</span>}{x.delivery&&<span style={s.badge("#dbeafe","#1e40af")}>🚗 Delivery</span>}</div></div>
@@ -599,10 +596,24 @@ export default function App(){
                 <div style={{textAlign:"right"}}><div style={{fontWeight:700,color:t.ok}}>${Number(o.total).toFixed(2)}</div><div style={{fontSize:11,color:t.mut}}>{o.method==="pickup"?"📦":"🚗"} {o.method}</div></div>
               </div>
               <div style={{fontSize:12,color:t.mut,marginBottom:8}}>{o.order_items?.map(oi=>`${oi.quantity}x ${oi.item_name}`).join(", ")}</div>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
                 <span style={{...s.badge(o.status==="completed"?t.okBg:o.status==="cancelled"?"#fef2f2":"#fefce8",o.status==="completed"?"#166534":o.status==="cancelled"?t.no:"#854d0e")}}>{o.status}</span>
                 <button onClick={()=>setActiveOrder(o)} style={{...s.btnS(false),display:"flex",alignItems:"center",gap:4,fontSize:11}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Message</button>
               </div>
+              {o.status!=="completed"&&o.status!=="cancelled"&&<div>
+                <div style={{fontSize:12,fontWeight:600,marginBottom:6,color:t.mut}}>Update status</div>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                  {[{status:"confirmed",label:"✓ Confirm",bg:"#dbeafe",fg:"#1e40af"},{status:"ready",label:o.method==="pickup"?"📦 Ready for Pickup":"🚗 Out for Delivery",bg:"#fef3c7",fg:"#92400e"},{status:"completed",label:"✅ Completed",bg:t.okBg,fg:"#166534"},{status:"cancelled",label:"✕ Cancel",bg:"#fef2f2",fg:t.no}]
+                  .filter(st=>{ const order=["pending","confirmed","ready","completed"]; const cur=order.indexOf(o.status); const next=order.indexOf(st.status); return next>cur||st.status==="cancelled"; })
+                  .map(st=><button key={st.status} onClick={async()=>{
+                    await supabase.from("orders").update({status:st.status}).eq("id",o.id);
+                    // Auto-message the buyer about status change
+                    const msgs={"confirmed":"Your order has been confirmed! 🎉","ready":o.method==="pickup"?"Your order is ready for pickup! 📦":"Your order is out for delivery! 🚗","completed":"Order complete! Thanks for supporting local bakers 🍰","cancelled":"Unfortunately this order has been cancelled. Please message for details."};
+                    await supabase.from("messages").insert({order_id:o.id,sender_id:session.user.id,receiver_id:o.buyer_id,body:msgs[st.status]||`Order status updated to ${st.status}`});
+                    loadOrders();showToast(`Order ${st.status}`);
+                  }} style={{padding:"6px 12px",borderRadius:20,fontSize:12,fontWeight:600,border:"none",cursor:"pointer",background:st.bg,color:st.fg}}>{st.label}</button>)}
+                </div>
+              </div>}
               <div style={{fontSize:10,color:t.lit,marginTop:6}}>{new Date(o.created_at).toLocaleString("en-AU",{day:"numeric",month:"short",year:"numeric",hour:"numeric",minute:"2-digit"})}</div>
             </div>)}
           </>}
