@@ -870,3 +870,4 @@ export default function App(){
     {bp.mobile&&<nav style={s.nav}>{navItems.map(x=><button key={x.id} style={s.navB(tab===x.id&&!view)} onClick={()=>handleNavClick(x.id)}><I d={x.icon} s={22}/><span>{x.label}</span></button>)}</nav>}
   </div>;
 }
+//
