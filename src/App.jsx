@@ -285,7 +285,7 @@ export default function App(){
           </button>
         </div>
         <div style={{marginTop:24,display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
-          <button style={{...s.btnS(false),fontSize:13}} onClick={()=>setShowAuth(true)}>Sign in</button>
+          <button style={{...s.btnS(false),fontSize:13}} onClick={()=>{setAuthScreen("login");setShowAuth(true);}}>Sign in</button>
           <button style={{...s.btnS(true),fontSize:13}} onClick={()=>{setAuthScreen("signup");setShowAuth(true);}}>Create account</button>
         </div>
       </div>
