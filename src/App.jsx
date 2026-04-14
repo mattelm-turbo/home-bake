@@ -685,8 +685,8 @@ export default function App(){
         </div>
 
         {/* Tabs */}
-        <div style={{display:"flex",gap:4,marginBottom:16,overflowX:"auto"}}>
-          {acctTabs.map(at=><button key={at.id} onClick={()=>setAcctTab(at.id)} style={{...s.btnS(acctTab===at.id),flexShrink:0}}>{at.label}</button>)}
+        <div style={{display:"flex",gap:4,marginBottom:16}}>
+          {acctTabs.map(at=><button key={at.id} onClick={()=>setAcctTab(at.id)} style={{...s.btnS(acctTab===at.id),flex:1,textAlign:"center",padding:"8px 4px",fontSize:bp.mobile?10:12,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{at.label}</button>)}
         </div>
 
         {/* Overview tab */}
