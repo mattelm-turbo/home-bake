@@ -14,6 +14,7 @@ const ic = {
   edit:"M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z",
   logout:"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9",
   x:"M18 6L6 18M6 6l12 12",
+  cog:"M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z",
 };
 
 const SIGNUPS_ENABLED = true;
@@ -617,7 +618,7 @@ export default function App(){
       {id:"purchases",label:`Buying${myPurchases.length?` (${myPurchases.length})`:""}`},
       {id:"sales",label:`Selling${mySales.length?` (${mySales.length})`:""}`},
       {id:"messages",label:`Messages${unreadCount?` (${unreadCount})`:""}`},
-      {id:"settings",label:"Settings"},
+      {id:"settings",icon:"cog"},
     ];
 
     return<>{mobileHeader}<div style={s.hdr}><span style={s.hdrT}>Account</span></div>
@@ -635,6 +636,7 @@ export default function App(){
             </div>
           </div>
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            <button onClick={()=>setAcctTab("settings")} style={{...s.btnS(false),display:"flex",alignItems:"center",gap:5,justifyContent:"center"}}><I d={ic.cog} s={14}/> Settings</button>
             <button onClick={()=>{setTab("sell");setView(null);}} style={{...s.btnS(false),display:"flex",alignItems:"center",gap:5,flex:1,justifyContent:"center"}}><I d={ic.store} s={14}/> My Kitchen</button>
             <button onClick={()=>{setEpFirst(profile?.first_name||"");setEpLast(profile?.last_name||"");setEpPhone(profile?.phone||"");setEpAddress(profile?.address||"");setEpSuburb(profile?.suburb||"");setEpState(profile?.state||"WA");setEpPostcode(profile?.postcode||"");setEditingProfile(true);}} style={{...s.btnS(false),display:"flex",alignItems:"center",gap:5,flex:1,justifyContent:"center"}}><I d={ic.edit} s={14}/> Edit Profile</button>
           </div>
@@ -642,7 +644,9 @@ export default function App(){
 
         {/* Tabs */}
         <div style={{display:"flex",gap:4,marginBottom:16,overflowX:"auto"}}>
-          {acctTabs.map(at=><button key={at.id} onClick={()=>setAcctTab(at.id)} style={{...s.btnS(acctTab===at.id),flexShrink:0}}>{at.label}</button>)}
+          {acctTabs.map(at=><button key={at.id} onClick={()=>setAcctTab(at.id)} style={{...s.btnS(acctTab===at.id),flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
+            {at.icon?<I d={ic[at.icon]} s={16} c={acctTab===at.id?"#fff":t.acc}/>:at.label}
+          </button>)}
         </div>
 
         {/* Overview tab */}
