@@ -129,7 +129,6 @@ export default function App(){
     const{error}=await supabase.from("profiles").upsert({id:session.user.id,name:d.name,handle:h,suburb:d.suburb,state:d.state,bio:d.bio,avatar_emoji:d.avatar_emoji||"🍰",delivery:d.delivery,pickup:d.pickup,lat:coords?.lat||null,lng:coords?.lng||null});
     if(error){showToast("Error saving");return false;}await loadProfile(session.user.id);return true;}
   async function addMenuItem(item){
-    // 🫖 Easter egg: HTTP 418
     if(item.name.toLowerCase().trim()==="teapot"||item.name.toLowerCase().trim()==="a teapot"){
       setTeapotMode(true);return false;
     }
@@ -171,13 +170,8 @@ export default function App(){
       <div style={{fontSize:120,marginBottom:8,animation:"wobble 0.5s ease-in-out",filter:"drop-shadow(0 8px 24px rgba(0,0,0,0.15))"}}>🫖</div>
       <div style={{fontFamily:"monospace",fontSize:14,color:t.no,background:"#fef2f2",padding:"8px 16px",borderRadius:8,display:"inline-block",marginBottom:16,fontWeight:700,letterSpacing:1}}>HTTP 418</div>
       <div style={{fontSize:28,fontWeight:800,marginBottom:8,color:t.txt}}>I'm a Teapot</div>
-      <div style={{fontSize:15,color:t.mut,lineHeight:1.7,marginBottom:8}}>
-        The server refuses to brew coffee because it is, permanently, a teapot.
-      </div>
-      <div style={{fontSize:14,color:t.mut,lineHeight:1.7,marginBottom:24,fontStyle:"italic"}}>
-        This is a baking platform, not a tea party.<br/>
-        Although... we do accept scones. 🫡
-      </div>
+      <div style={{fontSize:15,color:t.mut,lineHeight:1.7,marginBottom:8}}>The server refuses to brew coffee because it is, permanently, a teapot.</div>
+      <div style={{fontSize:14,color:t.mut,lineHeight:1.7,marginBottom:24,fontStyle:"italic"}}>This is a baking platform, not a tea party.<br/>Although... we do accept scones. 🫡</div>
       <div style={{background:t.card,borderRadius:t.r,padding:16,boxShadow:t.sh,textAlign:"left",marginBottom:20}}>
         <div style={{fontFamily:"monospace",fontSize:12,color:t.mut,lineHeight:1.8}}>
           <span style={{color:t.no}}>POST</span> /api/menu-items<br/>
@@ -205,7 +199,8 @@ export default function App(){
         <div style={{marginBottom:12}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Email</label><input style={s.inp} type="email" placeholder="you@example.com" value={authEmail} onChange={e=>{setAuthEmail(e.target.value);setAuthErr("");}}/></div>
         <div style={{marginBottom:16}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Password</label><input style={s.inp} type="password" placeholder="••••••••" value={authPass} onChange={e=>{setAuthPass(e.target.value);setAuthErr("");}} onKeyDown={e=>e.key==="Enter"&&handleLogin()}/></div>
         {authErr&&<div style={{padding:"10px 14px",background:"#fef2f2",borderRadius:t.rs,color:t.no,fontSize:13,marginBottom:12}}>{authErr}</div>}
-        <button style={{...s.btn(true),opacity:authLoading?.6:1}} onClick={handleLogin} disabled={authLoading}>{authLoading?"Signing in...":"Sign In"}</button>
+        {/* FIX: was authLoading?.6:1 */}
+        <button style={{...s.btn(true),opacity:authLoading?0.6:1}} onClick={handleLogin} disabled={authLoading}>{authLoading?"Signing in...":"Sign In"}</button>
         <div style={{display:"flex",alignItems:"center",gap:12,margin:"16px 0"}}><div style={{flex:1,height:1,background:t.bdr}}/><span style={{fontSize:12,color:t.lit}}>or</span><div style={{flex:1,height:1,background:t.bdr}}/></div>
         <button style={{...s.btn(false),display:"flex",alignItems:"center",justifyContent:"center",gap:10}} onClick={handleGoogleLogin}><GoogleIcon/> Continue with Google</button>
         <div style={{display:"flex",justifyContent:"space-between",marginTop:14,fontSize:13}}>
@@ -223,7 +218,8 @@ export default function App(){
         <div style={{display:"flex",gap:8,marginBottom:12}}><div style={{flex:2}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Suburb *</label><input style={s.inp} placeholder="Subiaco" value={authSuburb} onChange={e=>setAuthSuburb(e.target.value)}/></div><div style={{flex:1}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>State</label><select style={s.sel} value={authState} onChange={e=>setAuthState(e.target.value)}>{["WA","NSW","VIC","QLD","SA","TAS","NT","ACT"].map(x=><option key={x}>{x}</option>)}</select></div><div style={{flex:1}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Postcode *</label><input style={s.inp} placeholder="6008" value={authPostcode} onChange={e=>setAuthPostcode(e.target.value)}/></div></div>
         <div style={{marginBottom:16}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Password * (min 6 chars)</label><input style={s.inp} type="password" placeholder="••••••••" value={authPass} onChange={e=>setAuthPass(e.target.value)}/></div>
         {authErr&&<div style={{padding:"10px 14px",background:"#fef2f2",borderRadius:t.rs,color:t.no,fontSize:13,marginBottom:12}}>{authErr}</div>}
-        <button style={{...s.btn(true),opacity:authLoading?.6:1}} onClick={handleSignup} disabled={authLoading}>{authLoading?"Creating...":"Create Account"}</button>
+        {/* FIX: was authLoading?.6:1 */}
+        <button style={{...s.btn(true),opacity:authLoading?0.6:1}} onClick={handleSignup} disabled={authLoading}>{authLoading?"Creating...":"Create Account"}</button>
         <div style={{display:"flex",alignItems:"center",gap:12,margin:"16px 0"}}><div style={{flex:1,height:1,background:t.bdr}}/><span style={{fontSize:12,color:t.lit}}>or</span><div style={{flex:1,height:1,background:t.bdr}}/></div>
         <button style={{...s.btn(false),display:"flex",alignItems:"center",justifyContent:"center",gap:10}} onClick={handleGoogleLogin}><GoogleIcon/> Continue with Google</button>
         <button style={{background:"none",border:"none",color:t.acc,cursor:"pointer",fontSize:13,padding:0,marginTop:12}} onClick={()=>setAuthScreen("login")}>← Already have an account? Sign in</button>
@@ -255,7 +251,7 @@ export default function App(){
         <div style={{marginBottom:12}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Street address *</label><input style={s.inp} placeholder="123 Baker Street" value={cpAd} onChange={e=>setCpAd(e.target.value)}/></div>
         <div style={{display:"flex",gap:8,marginBottom:16}}><div style={{flex:2}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Suburb *</label><input style={s.inp} placeholder="Subiaco" value={cpSb} onChange={e=>setCpSb(e.target.value)}/></div><div style={{flex:1}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>State</label><select style={s.sel} value={cpSt} onChange={e=>setCpSt(e.target.value)}>{["WA","NSW","VIC","QLD","SA","TAS","NT","ACT"].map(x=><option key={x}>{x}</option>)}</select></div><div style={{flex:1}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Postcode *</label><input style={s.inp} placeholder="6008" value={cpPc} onChange={e=>setCpPc(e.target.value)}/></div></div>
         {cpErr&&<div style={{padding:"10px 14px",background:"#fef2f2",borderRadius:t.rs,color:t.no,fontSize:13,marginBottom:12}}>{cpErr}</div>}
-        <button style={{...s.btn(true),opacity:(ok&&!cpSaving)?1:.5}} disabled={!ok||cpSaving} onClick={async()=>{setCpSaving(true);
+        <button style={{...s.btn(true),opacity:(ok&&!cpSaving)?1:0.5}} disabled={!ok||cpSaving} onClick={async()=>{setCpSaving(true);
           const coords=await geocodeSuburb(cpSb,cpSt);
           const{error}=await supabase.from("profiles").update({name:`${cpF} ${cpL}`,first_name:cpF,last_name:cpL,phone:cpPh,address:`${cpAd}, ${cpSb} ${cpSt} ${cpPc}`,suburb:cpSb,state:cpSt,postcode:cpPc,handle:"@"+cpF.toLowerCase().replace(/[^a-z0-9]/g,""),lat:coords?.lat||null,lng:coords?.lng||null}).eq("id",session.user.id);
           if(error){setCpErr("Something went wrong.");setCpSaving(false);return;}await loadProfile(session.user.id);setCpSaving(false);showToast("Profile complete! 🎉");}}>{cpSaving?"Saving...":"Continue"}</button>
@@ -299,6 +295,8 @@ export default function App(){
   const ToastEl=toast?<div style={{position:"fixed",top:20,left:"50%",transform:"translateX(-50%)",background:t.ok,color:"#fff",padding:"10px 24px",borderRadius:24,fontSize:13,fontWeight:600,zIndex:300}}>✓ {toast}</div>:null;
   const navItems=[{id:"browse",icon:ic.home,label:"Browse"},{id:"cart",icon:ic.cart,label:`Order${cartN?` (${cartN})`:""}`},{id:"sell",icon:ic.store,label:"Sell"},{id:"account",icon:ic.user,label:"Account"}];
 
+  // FIX: NavBar is the single source of truth for both mobile and desktop nav.
+  // The duplicate mobile <nav> at the bottom of the render has been removed.
   const NavBar=()=>{
     if(bp.mobile)return<nav style={s.nav}>{navItems.map(x=><button key={x.id} style={s.navB(tab===x.id&&!view)} onClick={()=>handleNavClick(x.id)}><I d={x.icon} s={22}/><span>{x.label}</span></button>)}</nav>;
     return<nav style={s.nav}><div style={{display:"flex",alignItems:"center",gap:10,marginRight:16}}><img src="/logo-hb.png" alt="HB" style={{height:30,width:"auto"}} onError={e=>{e.target.style.display="none"}}/><span style={{fontSize:20,fontWeight:800}}><span style={{color:t.pri}}>Home</span>Baked</span></div>
@@ -307,19 +305,20 @@ export default function App(){
     </nav>;
   };
 
-  // ─── Browse Search (native ref to prevent focus loss) ─────────────────────
+  // ─── Browse Search ─────────────────────────────────────────────────────────
   const browseSearchBar=<div style={{padding:`0 ${s.px}px`,marginBottom:10}}><div style={{position:"relative"}}>
     <input style={{...s.inp,paddingLeft:38}} placeholder="Search address or suburb..." ref={el=>{if(el&&!el._hb){el._hb=true;let tm=null;el.addEventListener("input",ev=>{const v=ev.target.value;clearTimeout(tm);tm=setTimeout(()=>{setAddressSearch(v);if(v.length<3){setPlaceSuggestions([]);setShowDropdown(false);return;}if(window.google?.maps?.places)searchPlaces(v);else{setPlaceSuggestions([]);setShowDropdown(false);}},300);});}}}/>
     <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:t.lit,pointerEvents:"none"}}><I d={ic.loc} s={16}/></span>
     {showDropdown&&placeSuggestions.length>0&&<div style={{position:"absolute",top:"100%",left:0,right:0,marginTop:4,background:t.card,borderRadius:t.rs,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",border:`1px solid ${t.bdr}`,zIndex:10,maxHeight:300,overflowY:"auto"}}>{placeSuggestions.map((p,i)=><button key={p.place_id||i} onClick={()=>selectPlace(p.place_id,p.description)} style={{display:"flex",alignItems:"center",gap:10,width:"100%",padding:"12px 16px",border:"none",background:"none",cursor:"pointer",fontSize:14,color:t.txt,textAlign:"left",borderBottom:`1px solid ${t.bdr}`}} onMouseEnter={e=>e.currentTarget.style.background=t.bg} onMouseLeave={e=>e.currentTarget.style.background="none"}><I d={ic.loc} s={16} c={t.lit}/><span style={{flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.description}</span></button>)}</div>}
   </div></div>;
 
-  // ─── Lightbox ──────────────────────────────────────────────────────────
+  // ─── Lightbox ──────────────────────────────────────────────────────────────
   const openLightbox=(images,index)=>setLightbox({images,index});
   const closeLightbox=()=>setLightbox(null);
   const lbPrev=()=>setLightbox(p=>p?{...p,index:(p.index-1+p.images.length)%p.images.length}:null);
   const lbNext=()=>setLightbox(p=>p?{...p,index:(p.index+1)%p.images.length}:null);
   const lbGo=(i)=>setLightbox(p=>p?{...p,index:i}:null);
+
   const mobileHeader=bp.mobile?<div style={{padding:"12px 16px 8px"}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}><div style={{display:"flex",alignItems:"center",gap:10}}><img src="/logo-hb.png" alt="HB" style={{height:32,width:"auto"}} onError={e=>{e.target.style.display="none"}}/><div><div style={{fontSize:18,fontWeight:800}}><span style={{color:t.pri}}>Home</span>Baked</div><button onClick={()=>{setChosenSuburb(null);setAddressSearch("");}} style={{fontSize:11,color:t.acc,background:"none",border:"none",cursor:"pointer",padding:0,display:"flex",alignItems:"center",gap:4}}><I d={ic.loc} s={12} c={t.acc}/> {chosenSuburb?.name||"Perth"} · 20km <span style={{color:t.lit,textDecoration:"underline",marginLeft:2}}>Change</span></button></div></div>
     {session?<div style={{width:32,height:32,borderRadius:10,background:t.priL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,cursor:"pointer"}} onClick={()=>{setTab("account");setView(null);}}>{profile?.first_name?.[0]||"?"}</div>:<button onClick={()=>setShowAuth(true)} style={{...s.btnS(true),fontSize:11}}>Sign in</button>}
   </div></div>:null;
@@ -358,7 +357,6 @@ export default function App(){
         <div style={{fontWeight:700,fontSize:15,marginBottom:8}}>Menu</div><div style={{display:"flex",gap:6,overflowX:"auto",marginBottom:12}}>{cats.map(c=><button key={c} onClick={()=>setMc(c)} style={{...s.btnS(mc===c),whiteSpace:"nowrap",flexShrink:0}}>{c}</button>)}</div>
         <div style={s.menuGrid}>{items.map(item=><div key={item.id} style={s.card}><div style={{padding:14}}><div style={{display:"flex",gap:12}}><div style={{width:68,height:68,borderRadius:12,background:"#fef3c7",display:"flex",alignItems:"center",justifyContent:"center",fontSize:34,flexShrink:0}}>{item.emoji}</div>
           <div style={{flex:1}}><div style={{fontWeight:600,fontSize:14,marginBottom:2}}>{item.name}</div><div style={{fontSize:12,color:t.mut,lineHeight:1.5,marginBottom:4}}>{item.description}</div>{item.allergens?.length>0&&<div style={{marginBottom:4}}>{item.allergens.map(a=><span key={a} style={s.tag}>⚠ {a}</span>)}</div>}<div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontWeight:700,fontSize:17,color:t.pri}}>${item.price}</span><button onClick={e=>{e.stopPropagation();addCart(x,item);}} style={s.btnS(true)}>+ Add</button></div></div></div></div></div>)}</div>
-        
         {x.gallery?.length>0&&<>
           <div style={{fontWeight:700,fontSize:15,marginTop:20,marginBottom:10}}>Gallery</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
@@ -385,93 +383,85 @@ export default function App(){
       </div>}</div></>;
   };
 
-// ─── Sell ─────────────────────────────────────────────────────────────────
-const Sell=()=>{
-  const[f,setF]=useState({name:"",suburb:"",state:"WA",bio:"",delivery:true,pickup:true});
-  const[mf,setMf]=useState({name:"",cat:"Cakes",price:"",desc:"",allergens:[],emoji:"🍰"});
-  const[myMenu,setMyMenu]=useState([]);
-  const[addingItem,setAddingItem]=useState(false);
-  const[agreed,setAgreed]=useState(false);
-  const[saving,setSaving]=useState(false);
-  const[editingStore,setEditingStore]=useState(false);
-  const[storeForm,setStoreForm]=useState(null);
-  const[uploadingPhoto,setUploadingPhoto]=useState(false);
-  const[photoPreview,setPhotoPreview]=useState(null);
-  const[myGallery,setMyGallery]=useState([]);
-  const[uploadingGallery,setUploadingGallery]=useState(false);
-  const[galleryCaption,setGalleryCaption]=useState("");
-  const fileInputRef=useRef(null);
-  const galleryInputRef=useRef(null);
-  const formW={maxWidth:560,margin:"0 auto"};
+  // ─── Sell ─────────────────────────────────────────────────────────────────
+  const Sell=()=>{
+    const[f,setF]=useState({name:"",suburb:"",state:"WA",bio:"",delivery:true,pickup:true});
+    const[mf,setMf]=useState({name:"",cat:"Cakes",price:"",desc:"",allergens:[],emoji:"🍰"});
+    const[myMenu,setMyMenu]=useState([]);
+    const[addingItem,setAddingItem]=useState(false);
+    const[agreed,setAgreed]=useState(false);
+    const[saving,setSaving]=useState(false);
+    const[editingStore,setEditingStore]=useState(false);
+    const[storeForm,setStoreForm]=useState(null);
+    const[uploadingPhoto,setUploadingPhoto]=useState(false);
+    const[photoPreview,setPhotoPreview]=useState(null);
+    const[myGallery,setMyGallery]=useState([]);
+    const[uploadingGallery,setUploadingGallery]=useState(false);
+    const[galleryCaption,setGalleryCaption]=useState("");
+    const fileInputRef=useRef(null);
+    const galleryInputRef=useRef(null);
+    const formW={maxWidth:560,margin:"0 auto"};
 
-  const loadMyGallery=async()=>{if(!session?.user)return;const{data}=await supabase.from("gallery_images").select("*").eq("seller_id",session.user.id).order("created_at",{ascending:false});setMyGallery(data||[]);};
+    const loadMyGallery=async()=>{if(!session?.user)return;const{data}=await supabase.from("gallery_images").select("*").eq("seller_id",session.user.id).order("created_at",{ascending:false});setMyGallery(data||[]);};
 
-  useEffect(()=>{if(profile){loadMyMenu().then(setMyMenu);loadMyGallery();}},[profile]);
+    useEffect(()=>{if(profile){loadMyMenu().then(setMyMenu);loadMyGallery();}},[profile]);
 
-  const handleGalleryUpload=async(e)=>{const file=e.target.files?.[0];if(!file)return;if(file.size>5*1024*1024){showToast("Image must be under 5MB");return;}setUploadingGallery(true);const ext=file.name.split(".").pop();const path=`${session.user.id}/${Date.now()}.${ext}`;const{error}=await supabase.storage.from("gallery").upload(path,file);if(error){showToast("Upload failed");setUploadingGallery(false);return;}const{data:urlData}=supabase.storage.from("gallery").getPublicUrl(path);if(urlData?.publicUrl){await supabase.from("gallery_images").insert({seller_id:session.user.id,image_url:urlData.publicUrl,caption:galleryCaption});setGalleryCaption("");loadMyGallery();await loadSellers();}setUploadingGallery(false);showToast("Photo added to gallery!");if(galleryInputRef.current)galleryInputRef.current.value="";};
+    const handleGalleryUpload=async(e)=>{const file=e.target.files?.[0];if(!file)return;if(file.size>5*1024*1024){showToast("Image must be under 5MB");return;}setUploadingGallery(true);const ext=file.name.split(".").pop();const path=`${session.user.id}/${Date.now()}.${ext}`;const{error}=await supabase.storage.from("gallery").upload(path,file);if(error){showToast("Upload failed");setUploadingGallery(false);return;}const{data:urlData}=supabase.storage.from("gallery").getPublicUrl(path);if(urlData?.publicUrl){await supabase.from("gallery_images").insert({seller_id:session.user.id,image_url:urlData.publicUrl,caption:galleryCaption});setGalleryCaption("");loadMyGallery();await loadSellers();}setUploadingGallery(false);showToast("Photo added to gallery!");if(galleryInputRef.current)galleryInputRef.current.value="";};
 
-  const deleteGalleryImage=async(img)=>{await supabase.from("gallery_images").delete().eq("id",img.id);const path=img.image_url.split("/gallery/")[1]?.split("?")[0];if(path)await supabase.storage.from("gallery").remove([path]);loadMyGallery();await loadSellers();showToast("Photo removed");};
+    const deleteGalleryImage=async(img)=>{await supabase.from("gallery_images").delete().eq("id",img.id);const path=img.image_url.split("/gallery/")[1]?.split("?")[0];if(path)await supabase.storage.from("gallery").remove([path]);loadMyGallery();await loadSellers();showToast("Photo removed");};
 
-  const handlePhotoUpload=async(e)=>{const file=e.target.files?.[0];if(!file)return;if(file.size>2*1024*1024){showToast("Max 2MB");return;}setUploadingPhoto(true);const reader=new FileReader();reader.onload=ev=>setPhotoPreview(ev.target.result);reader.readAsDataURL(file);const ext=file.name.split(".").pop();const path=`shop-icons/${session.user.id}.${ext}`;let{error}=await supabase.storage.from("shop-images").upload(path,file,{upsert:true});if(error){await supabase.storage.createBucket("shop-images",{public:true});await supabase.storage.from("shop-images").upload(path,file,{upsert:true});}const{data:urlData}=supabase.storage.from("shop-images").getPublicUrl(path);if(urlData?.publicUrl){await supabase.from("profiles").update({shop_image_url:urlData.publicUrl+"?t="+Date.now()}).eq("id",session.user.id);setStoreForm(p=>({...p,shop_image_url:urlData.publicUrl}));}setUploadingPhoto(false);showToast("Photo uploaded!");};
+    const handlePhotoUpload=async(e)=>{const file=e.target.files?.[0];if(!file)return;if(file.size>2*1024*1024){showToast("Max 2MB");return;}setUploadingPhoto(true);const reader=new FileReader();reader.onload=ev=>setPhotoPreview(ev.target.result);reader.readAsDataURL(file);const ext=file.name.split(".").pop();const path=`shop-icons/${session.user.id}.${ext}`;let{error}=await supabase.storage.from("shop-images").upload(path,file,{upsert:true});if(error){await supabase.storage.createBucket("shop-images",{public:true});await supabase.storage.from("shop-images").upload(path,file,{upsert:true});}const{data:urlData}=supabase.storage.from("shop-images").getPublicUrl(path);if(urlData?.publicUrl){await supabase.from("profiles").update({shop_image_url:urlData.publicUrl+"?t="+Date.now()}).eq("id",session.user.id);setStoreForm(p=>({...p,shop_image_url:urlData.publicUrl}));}setUploadingPhoto(false);showToast("Photo uploaded!");};
 
-  if(!profile||(!profile.suburb&&onboardStep===0))return<>{mobileHeader}<div style={s.hdr}><span style={s.hdrT}>Start Baking & Earning</span></div><div style={{...s.sec,...formW,textAlign:"center",padding:"20px 0"}}><div style={{fontSize:56,marginBottom:12}}>👩‍🍳</div><div style={{fontSize:20,fontWeight:800,marginBottom:6}}>Share what you bake</div><div style={{color:t.mut,fontSize:14,lineHeight:1.6,marginBottom:24}}>Sell your homemade cakes, biscuits, preserves & sweets to people nearby.</div><button style={s.btn(true)} onClick={()=>setOnboardStep(1)}>Get Started</button></div></>;
-  if(onboardStep===1)return<>{mobileHeader}<div style={s.hdr}><button style={s.bck} onClick={()=>setOnboardStep(0)}><I d={ic.back}/></button><span style={s.hdrT}>About You</span><span style={{fontSize:12,color:t.mut}}>1/2</span></div><div style={{...s.sec,...formW}}><div style={{marginBottom:14}}><label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:4}}>Display name *</label><input style={s.inp} placeholder="e.g. Sarah" value={f.name} onChange={e=>setF(p=>({...p,name:e.target.value}))}/></div><div style={{marginBottom:14}}><label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:4}}>Suburb *</label><div style={{display:"flex",gap:8}}><input style={{...s.inp,flex:1}} placeholder="Subiaco" value={f.suburb} onChange={e=>setF(p=>({...p,suburb:e.target.value}))}/><select style={{...s.sel,width:80}} value={f.state} onChange={e=>setF(p=>({...p,state:e.target.value}))}>{["WA","NSW","VIC","QLD","SA","TAS","NT","ACT"].map(x=><option key={x}>{x}</option>)}</select></div></div><div style={{marginBottom:14}}><label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:4}}>Bio</label><textarea style={s.ta} placeholder="What do you love baking?" value={f.bio} onChange={e=>setF(p=>({...p,bio:e.target.value}))}/></div><div style={{display:"flex",gap:16,marginBottom:14}}><label style={{fontSize:13,display:"flex",gap:6,alignItems:"center",cursor:"pointer"}}><input type="checkbox" checked={f.pickup} onChange={e=>setF(p=>({...p,pickup:e.target.checked}))}/> Pickup</label><label style={{fontSize:13,display:"flex",gap:6,alignItems:"center",cursor:"pointer"}}><input type="checkbox" checked={f.delivery} onChange={e=>setF(p=>({...p,delivery:e.target.checked}))}/> Delivery</label></div><button style={{...s.btn(true),opacity:(f.name&&f.suburb)?1:.5}} disabled={!f.name||!f.suburb} onClick={()=>setOnboardStep(2)}>Next → Add First Item</button></div></>;
-  if(onboardStep===2)return<>{mobileHeader}<div style={s.hdr}><button style={s.bck} onClick={()=>setOnboardStep(1)}><I d={ic.back}/></button><span style={s.hdrT}>First Item</span><span style={{fontSize:12,color:t.mut}}>2/2</span></div><div style={{...s.sec,...formW}}><MenuItemForm mf={mf} setMf={setMf} s={s}/><div style={{margin:"16px 0",padding:16,background:t.card,borderRadius:t.r,boxShadow:t.sh}}><div style={{fontWeight:700,fontSize:14,marginBottom:8}}>Before you go live</div><div style={{fontSize:13,color:t.mut,lineHeight:1.7,marginBottom:12}}>Under Australian food law, home sellers need to notify their local council.</div><div style={{marginTop:12,paddingTop:12,borderTop:`1px solid ${t.bdr}`}}><label style={{display:"flex",gap:10,cursor:"pointer",fontSize:13,lineHeight:1.5}}><input type="checkbox" checked={agreed} onChange={e=>setAgreed(e.target.checked)} style={{marginTop:2,flexShrink:0}}/><span>I understand I need to notify my local council and will only list shelf-stable items</span></label></div></div><button style={{...s.btn(true),opacity:(mf.name&&mf.price&&agreed&&!saving)?1:.5}} disabled={!mf.name||!mf.price||!agreed||saving} onClick={async()=>{setSaving(true);await saveProfile({...f,avatar_emoji:mf.emoji});await addMenuItem(mf);setSaving(false);setOnboardStep(0);showToast("You're live! 🎉");}}>{saving?"Saving...":"Go Live!"}</button></div></>;
-  if(addingItem)return<>{mobileHeader}<div style={s.hdr}><button style={s.bck} onClick={()=>setAddingItem(false)}><I d={ic.back}/></button><span style={s.hdrT}>Add Item</span></div><div style={{...s.sec,...formW}}><MenuItemForm mf={mf} setMf={setMf} s={s}/><button style={{...s.btn(true),marginTop:8,opacity:(mf.name&&mf.price&&!saving)?1:.5}} disabled={!mf.name||!mf.price||saving} onClick={async()=>{setSaving(true);await addMenuItem(mf);setMf({name:"",cat:"Cakes",price:"",desc:"",allergens:[],emoji:"🍰"});setAddingItem(false);setSaving(false);showToast("Item added!");loadMyMenu().then(setMyMenu);}}>{saving?"Saving...":"Add to Menu"}</button></div></>;
+    if(!profile||(!profile.suburb&&onboardStep===0))return<>{mobileHeader}<div style={s.hdr}><span style={s.hdrT}>Start Baking & Earning</span></div><div style={{...s.sec,...formW,textAlign:"center",padding:"20px 0"}}><div style={{fontSize:56,marginBottom:12}}>👩‍🍳</div><div style={{fontSize:20,fontWeight:800,marginBottom:6}}>Share what you bake</div><div style={{color:t.mut,fontSize:14,lineHeight:1.6,marginBottom:24}}>Sell your homemade cakes, biscuits, preserves & sweets to people nearby.</div><button style={s.btn(true)} onClick={()=>setOnboardStep(1)}>Get Started</button></div></>;
+    if(onboardStep===1)return<>{mobileHeader}<div style={s.hdr}><button style={s.bck} onClick={()=>setOnboardStep(0)}><I d={ic.back}/></button><span style={s.hdrT}>About You</span><span style={{fontSize:12,color:t.mut}}>1/2</span></div><div style={{...s.sec,...formW}}><div style={{marginBottom:14}}><label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:4}}>Display name *</label><input style={s.inp} placeholder="e.g. Sarah" value={f.name} onChange={e=>setF(p=>({...p,name:e.target.value}))}/></div><div style={{marginBottom:14}}><label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:4}}>Suburb *</label><div style={{display:"flex",gap:8}}><input style={{...s.inp,flex:1}} placeholder="Subiaco" value={f.suburb} onChange={e=>setF(p=>({...p,suburb:e.target.value}))}/><select style={{...s.sel,width:80}} value={f.state} onChange={e=>setF(p=>({...p,state:e.target.value}))}>{["WA","NSW","VIC","QLD","SA","TAS","NT","ACT"].map(x=><option key={x}>{x}</option>)}</select></div></div><div style={{marginBottom:14}}><label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:4}}>Bio</label><textarea style={s.ta} placeholder="What do you love baking?" value={f.bio} onChange={e=>setF(p=>({...p,bio:e.target.value}))}/></div><div style={{display:"flex",gap:16,marginBottom:14}}><label style={{fontSize:13,display:"flex",gap:6,alignItems:"center",cursor:"pointer"}}><input type="checkbox" checked={f.pickup} onChange={e=>setF(p=>({...p,pickup:e.target.checked}))}/> Pickup</label><label style={{fontSize:13,display:"flex",gap:6,alignItems:"center",cursor:"pointer"}}><input type="checkbox" checked={f.delivery} onChange={e=>setF(p=>({...p,delivery:e.target.checked}))}/> Delivery</label></div><button style={{...s.btn(true),opacity:(f.name&&f.suburb)?1:0.5}} disabled={!f.name||!f.suburb} onClick={()=>setOnboardStep(2)}>Next → Add First Item</button></div></>;
+    if(onboardStep===2)return<>{mobileHeader}<div style={s.hdr}><button style={s.bck} onClick={()=>setOnboardStep(1)}><I d={ic.back}/></button><span style={s.hdrT}>First Item</span><span style={{fontSize:12,color:t.mut}}>2/2</span></div><div style={{...s.sec,...formW}}><MenuItemForm mf={mf} setMf={setMf} s={s}/><div style={{margin:"16px 0",padding:16,background:t.card,borderRadius:t.r,boxShadow:t.sh}}><div style={{fontWeight:700,fontSize:14,marginBottom:8}}>Before you go live</div><div style={{fontSize:13,color:t.mut,lineHeight:1.7,marginBottom:12}}>Under Australian food law, home sellers need to notify their local council.</div><div style={{marginTop:12,paddingTop:12,borderTop:`1px solid ${t.bdr}`}}><label style={{display:"flex",gap:10,cursor:"pointer",fontSize:13,lineHeight:1.5}}><input type="checkbox" checked={agreed} onChange={e=>setAgreed(e.target.checked)} style={{marginTop:2,flexShrink:0}}/><span>I understand I need to notify my local council and will only list shelf-stable items</span></label></div></div><button style={{...s.btn(true),opacity:(mf.name&&mf.price&&agreed&&!saving)?1:0.5}} disabled={!mf.name||!mf.price||!agreed||saving} onClick={async()=>{setSaving(true);await saveProfile({...f,avatar_emoji:mf.emoji});await addMenuItem(mf);setSaving(false);setOnboardStep(0);showToast("You're live! 🎉");}}>{saving?"Saving...":"Go Live!"}</button></div></>;
+    if(addingItem)return<>{mobileHeader}<div style={s.hdr}><button style={s.bck} onClick={()=>setAddingItem(false)}><I d={ic.back}/></button><span style={s.hdrT}>Add Item</span></div><div style={{...s.sec,...formW}}><MenuItemForm mf={mf} setMf={setMf} s={s}/><button style={{...s.btn(true),marginTop:8,opacity:(mf.name&&mf.price&&!saving)?1:0.5}} disabled={!mf.name||!mf.price||saving} onClick={async()=>{setSaving(true);await addMenuItem(mf);setMf({name:"",cat:"Cakes",price:"",desc:"",allergens:[],emoji:"🍰"});setAddingItem(false);setSaving(false);showToast("Item added!");loadMyMenu().then(setMyMenu);}}>{saving?"Saving...":"Add to Menu"}</button></div></>;
 
-  if(editingStore){const sf=storeForm;return<>{mobileHeader}<div style={s.hdr}><button style={s.bck} onClick={()=>setEditingStore(false)}><I d={ic.back}/></button><span style={s.hdrT}>Customize Kitchen</span></div><div style={{...s.sec,...formW}}>
-    <div style={{textAlign:"center",marginBottom:20}}><div style={{fontSize:14,fontWeight:600,marginBottom:8}}>Shop photo</div><div onClick={()=>fileInputRef.current?.click()} style={{width:120,height:120,borderRadius:24,margin:"0 auto",cursor:"pointer",overflow:"hidden",border:`2px dashed ${t.bdr}`,display:"flex",alignItems:"center",justifyContent:"center",background:t.bg,position:"relative"}}>{(photoPreview||sf.shop_image_url)?<img src={photoPreview||sf.shop_image_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{textAlign:"center",color:t.mut}}><I d={ic.cam} s={28} c={t.lit}/><div style={{fontSize:11,marginTop:4}}>Tap to upload</div></div>}{uploadingPhoto&&<div style={{position:"absolute",inset:0,background:"rgba(255,255,255,0.8)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:t.pri,fontWeight:600}}>Uploading...</div>}</div><input ref={fileInputRef} type="file" accept="image/*" style={{display:"none"}} onChange={handlePhotoUpload}/><div style={{fontSize:11,color:t.mut,marginTop:6}}>Square · Max 2MB</div></div>
-    <div style={{marginBottom:14}}><label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:4}}>Kitchen name *</label><input style={s.inp} value={sf.name} onChange={e=>setStoreForm(p=>({...p,name:e.target.value}))}/></div>
-    <div style={{marginBottom:14}}><label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:4}}>About</label><textarea style={{...s.ta,minHeight:120}} placeholder="Tell customers about yourself!" value={sf.bio} onChange={e=>setStoreForm(p=>({...p,bio:e.target.value}))}/><div style={{fontSize:11,color:t.mut,marginTop:3}}>{(sf.bio||"").length}/500</div></div>
-    <div style={{marginBottom:14}}><label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:6}}>Cuisine style</label>
-      <select style={s.sel} value={sf.cuisine||""} onChange={e=>setStoreForm(p=>({...p,cuisine:e.target.value}))}>
-        <option value="">Select a cuisine...</option>
-        {CUISINES.map(c=><option key={c.name} value={c.name}>{c.flag} {c.name}</option>)}
-      </select>
-    </div>
-    <div style={{marginBottom:14}}><label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:4}}>Suburb *</label><div style={{display:"flex",gap:8}}><input style={{...s.inp,flex:1}} value={sf.suburb} onChange={e=>setStoreForm(p=>({...p,suburb:e.target.value}))}/><select style={{...s.sel,width:80}} value={sf.state} onChange={e=>setStoreForm(p=>({...p,state:e.target.value}))}>{["WA","NSW","VIC","QLD","SA","TAS","NT","ACT"].map(x=><option key={x}>{x}</option>)}</select></div></div>
-    <div style={{marginBottom:14}}><label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:4}}>Store emoji</label><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{EMOJIS.map(e=><button key={e} onClick={()=>setStoreForm(p=>({...p,avatar_emoji:e}))} style={{width:40,height:40,borderRadius:10,border:sf.avatar_emoji===e?`2px solid ${t.pri}`:`1.5px solid ${t.bdr}`,background:sf.avatar_emoji===e?t.priL:t.card,fontSize:20,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>{e}</button>)}</div></div>
-    <div style={{marginBottom:20}}><label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:8}}>Fulfilment</label><div style={{display:"flex",gap:16}}><label style={{fontSize:14,display:"flex",gap:8,alignItems:"center",cursor:"pointer",padding:"10px 16px",borderRadius:t.rs,background:sf.pickup?t.okBg:t.bg,border:`1.5px solid ${sf.pickup?t.ok:t.bdr}`}}><input type="checkbox" checked={sf.pickup} onChange={e=>setStoreForm(p=>({...p,pickup:e.target.checked}))}/> 📦 Pickup</label><label style={{fontSize:14,display:"flex",gap:8,alignItems:"center",cursor:"pointer",padding:"10px 16px",borderRadius:t.rs,background:sf.delivery?"#dbeafe":t.bg,border:`1.5px solid ${sf.delivery?"#3b82f6":t.bdr}`}}><input type="checkbox" checked={sf.delivery} onChange={e=>setStoreForm(p=>({...p,delivery:e.target.checked}))}/> 🚗 Delivery</label></div></div>
-    <button style={{...s.btn(true),marginBottom:8}} onClick={async()=>{if(!sf.name||!sf.suburb){showToast("Name and suburb required");return;}setSaving(true);
-      const coords=await geocodeSuburb(sf.suburb,sf.state);
-      await supabase.from("profiles").update({name:sf.name,handle:"@"+sf.name.toLowerCase().replace(/[^a-z0-9]/g,""),bio:(sf.bio||"").slice(0,500),suburb:sf.suburb,state:sf.state,avatar_emoji:sf.avatar_emoji,delivery:sf.delivery,pickup:sf.pickup,cuisine:sf.cuisine||null,lat:coords?.lat||null,lng:coords?.lng||null}).eq("id",session.user.id);
-      await loadProfile(session.user.id);await loadSellers();setSaving(false);setEditingStore(false);showToast("Kitchen updated! ✨");}}>{saving?"Saving...":"Save Changes"}</button>
-    <button style={s.btn(false)} onClick={()=>setEditingStore(false)}>Cancel</button>
-  </div></>;}
-
-  return<>{mobileHeader}<div style={s.hdr}><span style={s.hdrT}>Your Kitchen</span></div><div style={{...s.sec,...formW}}>
-    <div style={{...s.card,padding:16,marginBottom:12}}><div style={{display:"flex",gap:12,alignItems:"center"}}><div style={{width:56,height:56,borderRadius:16,background:t.priL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,flexShrink:0,overflow:"hidden"}}>{profile.shop_image_url?<img src={profile.shop_image_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:(profile.avatar_emoji||"🍰")}</div><div style={{flex:1}}><div style={{fontWeight:700,fontSize:16,display:"flex",alignItems:"center",gap:6}}>{profile.name}{profile.cuisine&&<span style={{fontSize:16}}>{CUISINES.find(c=>c.name===profile.cuisine)?.flag}</span>}</div><div style={{fontSize:12,color:t.mut}}>{profile.handle} · {profile.suburb}, {profile.state}</div></div>      <button onClick={()=>{setStoreForm({name:profile.name,bio:profile.bio||"",suburb:profile.suburb,state:profile.state,avatar_emoji:profile.avatar_emoji||"🍰",delivery:profile.delivery,pickup:profile.pickup,shop_image_url:profile.shop_image_url||"",cuisine:profile.cuisine||""});setPhotoPreview(null);setEditingStore(true);}} style={{...s.btnS(false),display:"flex",alignItems:"center",gap:4}}><I d={ic.edit} s={14}/> Edit</button></div>{profile.bio&&<p style={{fontSize:13,color:t.mut,margin:"10px 0 0",lineHeight:1.5}}>{profile.bio}</p>}<div style={{display:"flex",gap:5,marginTop:8}}>{profile.pickup&&<span style={s.badge(t.okBg,"#166534")}>Pickup</span>}{profile.delivery&&<span style={s.badge("#dbeafe","#1e40af")}>Delivery</span>}{!profile.verified&&<span style={s.badge("#fef3c7","#92400e")}>⏳ Pending</span>}</div></div>
-    {!profile.verified&&<div style={{...s.tip,background:"#fefce8",color:"#854d0e",marginBottom:12}}><strong>Reminder:</strong> Notify your council for the ✓ badge.<div style={{marginTop:8}}><button onClick={async()=>{await supabase.from("profiles").update({verified:true}).eq("id",session.user.id);loadProfile(session.user.id);}} style={{...s.btnS(true),fontSize:11}}>I've notified my council ✓</button></div></div>}
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",margin:"16px 0 10px"}}><span style={{fontWeight:700,fontSize:15}}>Menu ({myMenu.length})</span><button style={s.btnS(true)} onClick={()=>{setMf({name:"",cat:"Cakes",price:"",desc:"",allergens:[],emoji:"🍰"});setAddingItem(true);}}>+ Add Item</button></div>
-    {myMenu.map(item=><div key={item.id} style={{...s.card,padding:12,marginBottom:8}}><div style={{display:"flex",gap:10,alignItems:"center"}}><div style={{width:44,height:44,borderRadius:10,background:"#fef3c7",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{item.emoji}</div><div style={{flex:1}}><div style={{fontWeight:600,fontSize:13}}>{item.name}</div><div style={{fontSize:11,color:t.mut}}>{item.category} · ${Number(item.price).toFixed(2)}</div></div><button onClick={async()=>{await supabase.from("menu_items").update({active:false}).eq("id",item.id);const{data}=await supabase.from("menu_items").select("*").eq("seller_id",session.user.id).eq("active",true);setMyMenu(data||[]);await loadSellers();showToast("Item removed");}} style={{background:"none",border:"none",cursor:"pointer",color:t.no,padding:4}}><I d={ic.trash} s={16}/></button></div></div>)}
-    {myMenu.length===0&&<div style={{textAlign:"center",padding:30,color:t.mut}}><div style={{fontSize:32,marginBottom:8}}>🍰</div>No items yet</div>}
-
-    {/* Gallery Section */}
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",margin:"24px 0 10px"}}><span style={{fontWeight:700,fontSize:15}}>Gallery ({myGallery.length})</span></div>
-    <div style={{...s.tip,background:"#eff6ff",color:"#1e40af",marginBottom:12}}>Show off your creations! Photos appear on your public store page.</div>
-
-    {/* Upload area */}
-    <div style={{...s.card,padding:16,marginBottom:12}}>
-      <div style={{marginBottom:10}}>
-        <input style={s.inp} placeholder="Caption (optional)" value={galleryCaption} onChange={e=>setGalleryCaption(e.target.value)}/>
+    if(editingStore){const sf=storeForm;return<>{mobileHeader}<div style={s.hdr}><button style={s.bck} onClick={()=>setEditingStore(false)}><I d={ic.back}/></button><span style={s.hdrT}>Customize Kitchen</span></div><div style={{...s.sec,...formW}}>
+      <div style={{textAlign:"center",marginBottom:20}}><div style={{fontSize:14,fontWeight:600,marginBottom:8}}>Shop photo</div><div onClick={()=>fileInputRef.current?.click()} style={{width:120,height:120,borderRadius:24,margin:"0 auto",cursor:"pointer",overflow:"hidden",border:`2px dashed ${t.bdr}`,display:"flex",alignItems:"center",justifyContent:"center",background:t.bg,position:"relative"}}>{(photoPreview||sf.shop_image_url)?<img src={photoPreview||sf.shop_image_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{textAlign:"center",color:t.mut}}><I d={ic.cam} s={28} c={t.lit}/><div style={{fontSize:11,marginTop:4}}>Tap to upload</div></div>}{uploadingPhoto&&<div style={{position:"absolute",inset:0,background:"rgba(255,255,255,0.8)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:t.pri,fontWeight:600}}>Uploading...</div>}</div><input ref={fileInputRef} type="file" accept="image/*" style={{display:"none"}} onChange={handlePhotoUpload}/><div style={{fontSize:11,color:t.mut,marginTop:6}}>Square · Max 2MB</div></div>
+      <div style={{marginBottom:14}}><label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:4}}>Kitchen name *</label><input style={s.inp} value={sf.name} onChange={e=>setStoreForm(p=>({...p,name:e.target.value}))}/></div>
+      <div style={{marginBottom:14}}><label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:4}}>About</label><textarea style={{...s.ta,minHeight:120}} placeholder="Tell customers about yourself!" value={sf.bio} onChange={e=>setStoreForm(p=>({...p,bio:e.target.value}))}/><div style={{fontSize:11,color:t.mut,marginTop:3}}>{(sf.bio||"").length}/500</div></div>
+      <div style={{marginBottom:14}}><label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:6}}>Cuisine style</label>
+        <select style={s.sel} value={sf.cuisine||""} onChange={e=>setStoreForm(p=>({...p,cuisine:e.target.value}))}>
+          <option value="">Select a cuisine...</option>
+          {CUISINES.map(c=><option key={c.name} value={c.name}>{c.flag} {c.name}</option>)}
+        </select>
       </div>
-      <button onClick={()=>galleryInputRef.current?.click()} style={{...s.btn(false),display:"flex",alignItems:"center",justifyContent:"center",gap:8,position:"relative"}}>
-        {uploadingGallery?<span>Uploading...</span>:<><I d={ic.cam} s={18}/> Add Photo</>}
-      </button>
-      <input ref={galleryInputRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleGalleryUpload}/>
-      <div style={{fontSize:11,color:t.mut,marginTop:6,textAlign:"center"}}>JPG or PNG · Max 5MB</div>
-    </div>
+      <div style={{marginBottom:14}}><label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:4}}>Suburb *</label><div style={{display:"flex",gap:8}}><input style={{...s.inp,flex:1}} value={sf.suburb} onChange={e=>setStoreForm(p=>({...p,suburb:e.target.value}))}/><select style={{...s.sel,width:80}} value={sf.state} onChange={e=>setStoreForm(p=>({...p,state:e.target.value}))}>{["WA","NSW","VIC","QLD","SA","TAS","NT","ACT"].map(x=><option key={x}>{x}</option>)}</select></div></div>
+      <div style={{marginBottom:14}}><label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:4}}>Store emoji</label><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{EMOJIS.map(e=><button key={e} onClick={()=>setStoreForm(p=>({...p,avatar_emoji:e}))} style={{width:40,height:40,borderRadius:10,border:sf.avatar_emoji===e?`2px solid ${t.pri}`:`1.5px solid ${t.bdr}`,background:sf.avatar_emoji===e?t.priL:t.card,fontSize:20,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>{e}</button>)}</div></div>
+      <div style={{marginBottom:20}}><label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:8}}>Fulfilment</label><div style={{display:"flex",gap:16}}><label style={{fontSize:14,display:"flex",gap:8,alignItems:"center",cursor:"pointer",padding:"10px 16px",borderRadius:t.rs,background:sf.pickup?t.okBg:t.bg,border:`1.5px solid ${sf.pickup?t.ok:t.bdr}`}}><input type="checkbox" checked={sf.pickup} onChange={e=>setStoreForm(p=>({...p,pickup:e.target.checked}))}/> 📦 Pickup</label><label style={{fontSize:14,display:"flex",gap:8,alignItems:"center",cursor:"pointer",padding:"10px 16px",borderRadius:t.rs,background:sf.delivery?"#dbeafe":t.bg,border:`1.5px solid ${sf.delivery?"#3b82f6":t.bdr}`}}><input type="checkbox" checked={sf.delivery} onChange={e=>setStoreForm(p=>({...p,delivery:e.target.checked}))}/> 🚗 Delivery</label></div></div>
+      <button style={{...s.btn(true),marginBottom:8}} onClick={async()=>{if(!sf.name||!sf.suburb){showToast("Name and suburb required");return;}setSaving(true);
+        const coords=await geocodeSuburb(sf.suburb,sf.state);
+        await supabase.from("profiles").update({name:sf.name,handle:"@"+sf.name.toLowerCase().replace(/[^a-z0-9]/g,""),bio:(sf.bio||"").slice(0,500),suburb:sf.suburb,state:sf.state,avatar_emoji:sf.avatar_emoji,delivery:sf.delivery,pickup:sf.pickup,cuisine:sf.cuisine||null,lat:coords?.lat||null,lng:coords?.lng||null}).eq("id",session.user.id);
+        await loadProfile(session.user.id);await loadSellers();setSaving(false);setEditingStore(false);showToast("Kitchen updated! ✨");}}>{saving?"Saving...":"Save Changes"}</button>
+      <button style={s.btn(false)} onClick={()=>setEditingStore(false)}>Cancel</button>
+    </div></>;}
 
-    {/* Gallery grid */}
-    {myGallery.length>0&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:16}}>
-      {myGallery.map(img=><div key={img.id} style={{position:"relative",paddingBottom:"100%",borderRadius:12,overflow:"hidden",background:t.bg}}>
-        <img src={img.image_url} alt={img.caption||""} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>
-        {img.caption&&<div style={{position:"absolute",bottom:0,left:0,right:0,padding:"16px 8px 6px",background:"linear-gradient(transparent,rgba(0,0,0,0.6))",color:"#fff",fontSize:10,fontWeight:500}}>{img.caption}</div>}
-        <button onClick={()=>deleteGalleryImage(img)} style={{position:"absolute",top:6,right:6,width:24,height:24,borderRadius:12,background:"rgba(0,0,0,0.6)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><I d={ic.x} s={12} c="#fff"/></button>
-      </div>)}
-    </div>}
-  </div></>;
-};
+    return<>{mobileHeader}<div style={s.hdr}><span style={s.hdrT}>Your Kitchen</span></div><div style={{...s.sec,...formW}}>
+      <div style={{...s.card,padding:16,marginBottom:12}}><div style={{display:"flex",gap:12,alignItems:"center"}}><div style={{width:56,height:56,borderRadius:16,background:t.priL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,flexShrink:0,overflow:"hidden"}}>{profile.shop_image_url?<img src={profile.shop_image_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:(profile.avatar_emoji||"🍰")}</div><div style={{flex:1}}><div style={{fontWeight:700,fontSize:16,display:"flex",alignItems:"center",gap:6}}>{profile.name}{profile.cuisine&&<span style={{fontSize:16}}>{CUISINES.find(c=>c.name===profile.cuisine)?.flag}</span>}</div><div style={{fontSize:12,color:t.mut}}>{profile.handle} · {profile.suburb}, {profile.state}</div></div><button onClick={()=>{setStoreForm({name:profile.name,bio:profile.bio||"",suburb:profile.suburb,state:profile.state,avatar_emoji:profile.avatar_emoji||"🍰",delivery:profile.delivery,pickup:profile.pickup,shop_image_url:profile.shop_image_url||"",cuisine:profile.cuisine||""});setPhotoPreview(null);setEditingStore(true);}} style={{...s.btnS(false),display:"flex",alignItems:"center",gap:4}}><I d={ic.edit} s={14}/> Edit</button></div>{profile.bio&&<p style={{fontSize:13,color:t.mut,margin:"10px 0 0",lineHeight:1.5}}>{profile.bio}</p>}<div style={{display:"flex",gap:5,marginTop:8}}>{profile.pickup&&<span style={s.badge(t.okBg,"#166634")}>Pickup</span>}{profile.delivery&&<span style={s.badge("#dbeafe","#1e40af")}>Delivery</span>}{!profile.verified&&<span style={s.badge("#fef3c7","#92400e")}>⏳ Pending</span>}</div></div>
+      {!profile.verified&&<div style={{...s.tip,background:"#fefce8",color:"#854d0e",marginBottom:12}}><strong>Reminder:</strong> Notify your council for the ✓ badge.<div style={{marginTop:8}}><button onClick={async()=>{await supabase.from("profiles").update({verified:true}).eq("id",session.user.id);loadProfile(session.user.id);}} style={{...s.btnS(true),fontSize:11}}>I've notified my council ✓</button></div></div>}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",margin:"16px 0 10px"}}><span style={{fontWeight:700,fontSize:15}}>Menu ({myMenu.length})</span><button style={s.btnS(true)} onClick={()=>{setMf({name:"",cat:"Cakes",price:"",desc:"",allergens:[],emoji:"🍰"});setAddingItem(true);}}>+ Add Item</button></div>
+      {myMenu.map(item=><div key={item.id} style={{...s.card,padding:12,marginBottom:8}}><div style={{display:"flex",gap:10,alignItems:"center"}}><div style={{width:44,height:44,borderRadius:10,background:"#fef3c7",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{item.emoji}</div><div style={{flex:1}}><div style={{fontWeight:600,fontSize:13}}>{item.name}</div><div style={{fontSize:11,color:t.mut}}>{item.category} · ${Number(item.price).toFixed(2)}</div></div><button onClick={async()=>{await supabase.from("menu_items").update({active:false}).eq("id",item.id);const{data}=await supabase.from("menu_items").select("*").eq("seller_id",session.user.id).eq("active",true);setMyMenu(data||[]);await loadSellers();showToast("Item removed");}} style={{background:"none",border:"none",cursor:"pointer",color:t.no,padding:4}}><I d={ic.trash} s={16}/></button></div></div>)}
+      {myMenu.length===0&&<div style={{textAlign:"center",padding:30,color:t.mut}}><div style={{fontSize:32,marginBottom:8}}>🍰</div>No items yet</div>}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",margin:"24px 0 10px"}}><span style={{fontWeight:700,fontSize:15}}>Gallery ({myGallery.length})</span></div>
+      <div style={{...s.tip,background:"#eff6ff",color:"#1e40af",marginBottom:12}}>Show off your creations! Photos appear on your public store page.</div>
+      <div style={{...s.card,padding:16,marginBottom:12}}>
+        <div style={{marginBottom:10}}><input style={s.inp} placeholder="Caption (optional)" value={galleryCaption} onChange={e=>setGalleryCaption(e.target.value)}/></div>
+        <button onClick={()=>galleryInputRef.current?.click()} style={{...s.btn(false),display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+          {uploadingGallery?<span>Uploading...</span>:<><I d={ic.cam} s={18}/> Add Photo</>}
+        </button>
+        <input ref={galleryInputRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleGalleryUpload}/>
+        <div style={{fontSize:11,color:t.mut,marginTop:6,textAlign:"center"}}>JPG or PNG · Max 5MB</div>
+      </div>
+      {myGallery.length>0&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:16}}>
+        {myGallery.map(img=><div key={img.id} style={{position:"relative",paddingBottom:"100%",borderRadius:12,overflow:"hidden",background:t.bg}}>
+          <img src={img.image_url} alt={img.caption||""} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>
+          {img.caption&&<div style={{position:"absolute",bottom:0,left:0,right:0,padding:"16px 8px 6px",background:"linear-gradient(transparent,rgba(0,0,0,0.6))",color:"#fff",fontSize:10,fontWeight:500}}>{img.caption}</div>}
+          <button onClick={()=>deleteGalleryImage(img)} style={{position:"absolute",top:6,right:6,width:24,height:24,borderRadius:12,background:"rgba(0,0,0,0.6)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><I d={ic.x} s={12} c="#fff"/></button>
+        </div>)}
+      </div>}
+    </div></>;
+  };
 
   // ─── Account ──────────────────────────────────────────────────────────────
   const Account=()=>{
@@ -498,10 +488,7 @@ const Sell=()=>{
     const[notifSaving,setNotifSaving]=useState(false);
     const msgEndRef=useRef(null);
 
-    useEffect(()=>{
-      loadOrders();loadUnread();loadNotifPrefs();
-    },[]);
-
+    useEffect(()=>{loadOrders();loadUnread();loadNotifPrefs();},[]);
     useEffect(()=>{if(activeOrder)loadMessages(activeOrder.id);},[activeOrder]);
     useEffect(()=>{msgEndRef.current?.scrollIntoView({behavior:"smooth"});},[messages]);
 
@@ -509,45 +496,34 @@ const Sell=()=>{
       const{data}=await supabase.from("orders").select(`*,order_items(*),buyer:profiles!orders_buyer_id_fkey(name,suburb),seller:profiles!orders_seller_id_fkey(name,suburb,avatar_emoji,shop_image_url)`).or(`buyer_id.eq.${session.user.id},seller_id.eq.${session.user.id}`).order("created_at",{ascending:false});
       setOrders(data||[]);
     };
-
     const loadMessages=async(orderId)=>{
       const{data}=await supabase.from("messages").select("*").eq("order_id",orderId).order("created_at",{ascending:true});
       setMessages(data||[]);
-      // Mark received messages as read
       await supabase.from("messages").update({read:true}).eq("order_id",orderId).eq("receiver_id",session.user.id).eq("read",false);
       loadUnread();
     };
-
     const loadUnread=async()=>{
       const{count}=await supabase.from("messages").select("*",{count:"exact",head:true}).eq("receiver_id",session.user.id).eq("read",false);
       setUnreadCount(count||0);
     };
-
     const loadNotifPrefs=async()=>{
       const{data}=await supabase.from("notification_prefs").select("*").eq("id",session.user.id).single();
       if(data)setNotifPrefs(data);
-      else{
-        await supabase.from("notification_prefs").insert({id:session.user.id});
-        setNotifPrefs({email_new_order:true,email_order_update:true,email_new_message:true,email_dispute:true,email_marketing:false});
-      }
+      else{await supabase.from("notification_prefs").insert({id:session.user.id});setNotifPrefs({email_new_order:true,email_order_update:true,email_new_message:true,email_dispute:true,email_marketing:false});}
     };
-
     const updateNotifPref=async(key,value)=>{
-      setNotifPrefs(p=>({...p,[key]:value}));
-      setNotifSaving(true);
+      setNotifPrefs(p=>({...p,[key]:value}));setNotifSaving(true);
       await supabase.from("notification_prefs").update({[key]:value,updated_at:new Date().toISOString()}).eq("id",session.user.id);
       setNotifSaving(false);
     };
-
     const sendMessage=async()=>{
       if(!msgInput.trim()||!activeOrder)return;
       const receiverId=activeOrder.buyer_id===session.user.id?activeOrder.seller_id:activeOrder.buyer_id;
       await supabase.from("messages").insert({order_id:activeOrder.id,sender_id:session.user.id,receiver_id:receiverId,body:msgInput.trim()});
-      setMsgInput("");
-      loadMessages(activeOrder.id);
+      setMsgInput("");loadMessages(activeOrder.id);
     };
 
-    // ─── Report Issue View ─────────────────────────────────────────────
+    // ─── Report Issue View ──────────────────────────────────────────────
     if(reportingOrder){
       const reasons=[{id:"wrong_item",label:"Wrong item received",icon:"📦"},{id:"quality_issue",label:"Quality not as described",icon:"👎"},{id:"damaged",label:"Item arrived damaged",icon:"💔"},{id:"not_received",label:"Never received my order",icon:"❌"},{id:"other",label:"Other issue",icon:"❓"}];
       return<>{mobileHeader}<div style={s.hdr}><button style={s.bck} onClick={()=>{setReportingOrder(null);setDisputeReason("");setDisputeDesc("");}}><I d={ic.back}/></button><span style={s.hdrT}>Report an Issue</span></div>
@@ -556,7 +532,6 @@ const Sell=()=>{
             <div style={{fontSize:13,color:t.mut}}>Order #{reportingOrder.id.slice(0,8)} · {reportingOrder.seller?.name} · ${Number(reportingOrder.total).toFixed(2)}</div>
             <div style={{fontSize:12,color:t.lit,marginTop:2}}>{reportingOrder.order_items?.map(oi=>`${oi.quantity}x ${oi.item_name}`).join(", ")}</div>
           </div>
-
           <div style={{fontWeight:600,fontSize:14,marginBottom:10}}>What went wrong?</div>
           <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:16}}>
             {reasons.map(r=><button key={r.id} onClick={()=>setDisputeReason(r.id)} style={{display:"flex",alignItems:"center",gap:12,padding:"14px 16px",borderRadius:t.rs,border:disputeReason===r.id?`2px solid ${t.pri}`:`1.5px solid ${t.bdr}`,background:disputeReason===r.id?t.priL:t.card,cursor:"pointer",textAlign:"left"}}>
@@ -564,29 +539,19 @@ const Sell=()=>{
               <span style={{fontSize:14,fontWeight:disputeReason===r.id?600:400,color:disputeReason===r.id?t.pri:t.txt}}>{r.label}</span>
             </button>)}
           </div>
-
           <div style={{marginBottom:16}}>
             <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:4}}>Tell us more *</label>
-            <textarea style={{...s.ta,minHeight:100}} placeholder="Please describe the issue in detail. What happened? What did you expect?" value={disputeDesc} onChange={e=>setDisputeDesc(e.target.value)}/>
+            <textarea style={{...s.ta,minHeight:100}} placeholder="Please describe the issue in detail." value={disputeDesc} onChange={e=>setDisputeDesc(e.target.value)}/>
           </div>
-
-          <div style={{...s.tip,background:"#eff6ff",color:"#1e40af",marginBottom:16}}>
-            When you submit, the seller will be notified and given a chance to resolve the issue. You can communicate with them via the message thread.
-          </div>
-
-          <button style={{...s.btn(true),opacity:(disputeReason&&disputeDesc.trim()&&!disputeSubmitting)?1:.5}} disabled={!disputeReason||!disputeDesc.trim()||disputeSubmitting} onClick={async()=>{
+          <div style={{...s.tip,background:"#eff6ff",color:"#1e40af",marginBottom:16}}>When you submit, the seller will be notified and given a chance to resolve the issue.</div>
+          <button style={{...s.btn(true),opacity:(disputeReason&&disputeDesc.trim()&&!disputeSubmitting)?1:0.5}} disabled={!disputeReason||!disputeDesc.trim()||disputeSubmitting} onClick={async()=>{
             setDisputeSubmitting(true);
-            // Create dispute record
             await supabase.from("disputes").insert({order_id:reportingOrder.id,buyer_id:session.user.id,seller_id:reportingOrder.seller_id,reason:disputeReason,description:disputeDesc.trim()});
-            // Update order status to disputed
             await supabase.from("orders").update({status:"disputed"}).eq("id",reportingOrder.id);
-            // Auto-message the seller
             const reasonLabels={wrong_item:"wrong item received",quality_issue:"quality not as described",damaged:"item arrived damaged",not_received:"order not received",other:"an issue"};
             await supabase.from("messages").insert({order_id:reportingOrder.id,sender_id:session.user.id,receiver_id:reportingOrder.seller_id,body:`⚠️ Issue reported: ${reasonLabels[disputeReason]||"an issue"}. "${disputeDesc.trim().slice(0,200)}". Please respond to resolve this.`});
-            setDisputeSubmitting(false);
-            setReportingOrder(null);setDisputeReason("");setDisputeDesc("");
-            loadOrders();
-            showToast("Issue reported — the seller has been notified");
+            setDisputeSubmitting(false);setReportingOrder(null);setDisputeReason("");setDisputeDesc("");
+            loadOrders();showToast("Issue reported — the seller has been notified");
           }}>{disputeSubmitting?"Submitting...":"Submit Report"}</button>
         </div>
       </>;
@@ -630,7 +595,8 @@ const Sell=()=>{
             <div style={{flex:1}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>State</label><select style={s.sel} value={epState} onChange={e=>setEpState(e.target.value)}>{["WA","NSW","VIC","QLD","SA","TAS","NT","ACT"].map(x=><option key={x}>{x}</option>)}</select></div>
             <div style={{flex:1}}><label style={{fontSize:12,fontWeight:600,display:"block",marginBottom:4}}>Postcode</label><input style={s.inp} value={epPostcode} onChange={e=>setEpPostcode(e.target.value)}/></div>
           </div>
-          <button style={{...s.btn(true),opacity:epSaving?.5:1}} disabled={epSaving} onClick={async()=>{
+          {/* FIX: was epSaving?.5:1 */}
+          <button style={{...s.btn(true),opacity:epSaving?0.5:1}} disabled={epSaving} onClick={async()=>{
             if(!epFirst||!epLast||!epPhone||!epSuburb){showToast("Please fill in all fields");return;}
             setEpSaving(true);
             await supabase.from("profiles").update({first_name:epFirst,last_name:epLast,phone:epPhone,address:epAddress,suburb:epSuburb,state:epState,postcode:epPostcode}).eq("id",session.user.id);
@@ -642,10 +608,17 @@ const Sell=()=>{
     }
 
     // ─── Main Account Page ──────────────────────────────────────────────
-    const acctTabs=[{id:"menu",label:"Overview"},{id:"purchases",label:"Purchases"},{id:"messages",label:`Messages${unreadCount?` (${unreadCount})`:""}`},{id:"settings",label:"Settings"}];
-
     const myPurchases=orders.filter(o=>o.buyer_id===session.user.id);
     const mySales=orders.filter(o=>o.seller_id===session.user.id);
+
+    // FIX: added separate "sales" tab; counts shown on tab labels
+    const acctTabs=[
+      {id:"menu",label:"Overview"},
+      {id:"purchases",label:`Buying${myPurchases.length?` (${myPurchases.length})`:""}`},
+      {id:"sales",label:`Selling${mySales.length?` (${mySales.length})`:""}`},
+      {id:"messages",label:`Messages${unreadCount?` (${unreadCount})`:""}`},
+      {id:"settings",label:"Settings"},
+    ];
 
     return<>{mobileHeader}<div style={s.hdr}><span style={s.hdrT}>Account</span></div>
       <div style={{...s.sec,maxWidth:600,margin:"0 auto"}}>
@@ -661,8 +634,6 @@ const Sell=()=>{
               {profile?.suburb&&<div style={{fontSize:12,color:t.lit}}>{profile.suburb}, {profile.state}</div>}
             </div>
           </div>
-
-          {/* Quick links */}
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
             <button onClick={()=>{setTab("sell");setView(null);}} style={{...s.btnS(false),display:"flex",alignItems:"center",gap:5,flex:1,justifyContent:"center"}}><I d={ic.store} s={14}/> My Kitchen</button>
             <button onClick={()=>{setEpFirst(profile?.first_name||"");setEpLast(profile?.last_name||"");setEpPhone(profile?.phone||"");setEpAddress(profile?.address||"");setEpSuburb(profile?.suburb||"");setEpState(profile?.state||"WA");setEpPostcode(profile?.postcode||"");setEditingProfile(true);}} style={{...s.btnS(false),display:"flex",alignItems:"center",gap:5,flex:1,justifyContent:"center"}}><I d={ic.edit} s={14}/> Edit Profile</button>
@@ -670,8 +641,8 @@ const Sell=()=>{
         </div>
 
         {/* Tabs */}
-        <div style={{display:"flex",gap:4,marginBottom:16}}>
-          {acctTabs.map(at=><button key={at.id} onClick={()=>setAcctTab(at.id)} style={{...s.btnS(acctTab===at.id),flex:1,textAlign:"center"}}>{at.label}</button>)}
+        <div style={{display:"flex",gap:4,marginBottom:16,overflowX:"auto"}}>
+          {acctTabs.map(at=><button key={at.id} onClick={()=>setAcctTab(at.id)} style={{...s.btnS(acctTab===at.id),flexShrink:0}}>{at.label}</button>)}
         </div>
 
         {/* Overview tab */}
@@ -690,8 +661,9 @@ const Sell=()=>{
           </div>
         </>}
 
-        {/* Purchases tab */}
+        {/* Purchases (Buying) tab */}
         {acctTab==="purchases"&&<>
+          <div style={{fontWeight:700,fontSize:15,marginBottom:12}}>My Purchases</div>
           {myPurchases.length===0&&<div style={{textAlign:"center",padding:40,color:t.mut}}><div style={{fontSize:40,marginBottom:8}}>🛒</div><div style={{fontWeight:600}}>No purchases yet</div><div style={{fontSize:13,marginTop:4}}>Browse local bakers and place your first order!</div></div>}
           {myPurchases.map(o=><div key={o.id} style={{...s.card,padding:16,marginBottom:10}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
@@ -703,63 +675,64 @@ const Sell=()=>{
             </div>
             <div style={{fontSize:12,color:t.mut,marginBottom:8}}>{o.order_items?.map(oi=>`${oi.quantity}x ${oi.item_name}`).join(", ")}</div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                              <span style={{...s.badge(o.status==="completed"?t.okBg:o.status==="cancelled"?"#fef2f2":o.status==="disputed"?"#fef2f2":"#fefce8",o.status==="completed"?"#166534":o.status==="cancelled"?t.no:o.status==="disputed"?t.no:"#854d0e")}}>{o.status==="disputed"?"⚠️ disputed":o.status}</span>
+              <span style={{...s.badge(o.status==="completed"?t.okBg:o.status==="cancelled"?"#fef2f2":o.status==="disputed"?"#fef2f2":"#fefce8",o.status==="completed"?"#166534":o.status==="cancelled"?t.no:o.status==="disputed"?t.no:"#854d0e")}}>{o.status==="disputed"?"⚠️ disputed":o.status}</span>
               <div style={{display:"flex",gap:6}}>
-                <button onClick={()=>{setActiveOrder(o);}} style={{...s.btnS(false),display:"flex",alignItems:"center",gap:4,fontSize:11}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Message</button>
+                <button onClick={()=>setActiveOrder(o)} style={{...s.btnS(false),display:"flex",alignItems:"center",gap:4,fontSize:11}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Message</button>
                 {o.status!=="cancelled"&&o.status!=="disputed"&&<button onClick={()=>{setReportingOrder(o);setDisputeReason("");setDisputeDesc("");}} style={{...s.btnS(false),display:"flex",alignItems:"center",gap:4,fontSize:11,color:t.no}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Report Issue</button>}
               </div>
             </div>
             <div style={{fontSize:10,color:t.lit,marginTop:6}}>{new Date(o.created_at).toLocaleString("en-AU",{day:"numeric",month:"short",year:"numeric",hour:"numeric",minute:"2-digit"})}</div>
           </div>)}
+        </>}
 
-          {mySales.length>0&&<>
-            <div style={{fontWeight:700,fontSize:15,margin:"20px 0 10px"}}>Sales (as seller)</div>
-            {mySales.map(o=><div key={o.id} style={{...s.card,padding:16,marginBottom:10}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-                <div><div style={{fontWeight:600,fontSize:14}}>Order from {o.buyer?.name||"Buyer"}</div><div style={{fontSize:11,color:t.mut}}>{o.buyer?.suburb}</div></div>
-                <div style={{textAlign:"right"}}><div style={{fontWeight:700,color:t.ok}}>${Number(o.total).toFixed(2)}</div><div style={{fontSize:11,color:t.mut}}>{o.method==="pickup"?"📦":"🚗"} {o.method}</div></div>
+        {/* Sales (Selling) tab */}
+        {acctTab==="sales"&&<>
+          <div style={{fontWeight:700,fontSize:15,marginBottom:12}}>My Sales</div>
+          {mySales.length===0&&<div style={{textAlign:"center",padding:40,color:t.mut}}><div style={{fontSize:40,marginBottom:8}}>🏪</div><div style={{fontWeight:600}}>No sales yet</div><div style={{fontSize:13,marginTop:4}}>Once customers order from your kitchen, they'll appear here.</div></div>}
+          {mySales.map(o=><div key={o.id} style={{...s.card,padding:16,marginBottom:10}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+              <div><div style={{fontWeight:600,fontSize:14}}>Order from {o.buyer?.name||"Buyer"}</div><div style={{fontSize:11,color:t.mut}}>{o.buyer?.suburb}</div></div>
+              <div style={{textAlign:"right"}}><div style={{fontWeight:700,color:t.ok}}>${Number(o.total).toFixed(2)}</div><div style={{fontSize:11,color:t.mut}}>{o.method==="pickup"?"📦":"🚗"} {o.method}</div></div>
+            </div>
+            <div style={{fontSize:12,color:t.mut,marginBottom:8}}>{o.order_items?.map(oi=>`${oi.quantity}x ${oi.item_name}`).join(", ")}</div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+              <span style={{...s.badge(o.status==="completed"?t.okBg:o.status==="cancelled"?"#fef2f2":o.status==="disputed"?"#fef2f2":"#fefce8",o.status==="completed"?"#166534":o.status==="cancelled"?t.no:o.status==="disputed"?t.no:"#854d0e")}}>{o.status==="disputed"?"⚠️ disputed":o.status}</span>
+              <button onClick={()=>setActiveOrder(o)} style={{...s.btnS(false),display:"flex",alignItems:"center",gap:4,fontSize:11}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Message</button>
+            </div>
+            {o.status!=="completed"&&o.status!=="cancelled"&&o.status!=="disputed"&&<div>
+              <div style={{fontSize:12,fontWeight:600,marginBottom:6,color:t.mut}}>Update status</div>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                {[{status:"confirmed",label:"✓ Confirm",bg:"#dbeafe",fg:"#1e40af"},{status:"ready",label:o.method==="pickup"?"📦 Ready for Pickup":"🚗 Out for Delivery",bg:"#fef3c7",fg:"#92400e"},{status:"completed",label:"✅ Completed",bg:t.okBg,fg:"#166534"},{status:"cancelled",label:"✕ Cancel",bg:"#fef2f2",fg:t.no}]
+                .filter(st=>{const ord=["pending","confirmed","ready","completed"];const cur=ord.indexOf(o.status);const next=ord.indexOf(st.status);return next>cur||st.status==="cancelled";})
+                .map(st=><button key={st.status} onClick={async()=>{
+                  await supabase.from("orders").update({status:st.status}).eq("id",o.id);
+                  const msgs={"confirmed":"Your order has been confirmed! 🎉","ready":o.method==="pickup"?"Your order is ready for pickup! 📦":"Your order is out for delivery! 🚗","completed":"Order complete! Thanks for supporting local bakers 🍰","cancelled":"Unfortunately this order has been cancelled. Please message for details."};
+                  await supabase.from("messages").insert({order_id:o.id,sender_id:session.user.id,receiver_id:o.buyer_id,body:msgs[st.status]||`Order status updated to ${st.status}`});
+                  loadOrders();showToast(`Order ${st.status}`);
+                }} style={{padding:"6px 12px",borderRadius:20,fontSize:12,fontWeight:600,border:"none",cursor:"pointer",background:st.bg,color:st.fg}}>{st.label}</button>)}
               </div>
-              <div style={{fontSize:12,color:t.mut,marginBottom:8}}>{o.order_items?.map(oi=>`${oi.quantity}x ${oi.item_name}`).join(", ")}</div>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-                <span style={{...s.badge(o.status==="completed"?t.okBg:o.status==="cancelled"?"#fef2f2":"#fefce8",o.status==="completed"?"#166534":o.status==="cancelled"?t.no:"#854d0e")}}>{o.status}</span>
-                <button onClick={()=>setActiveOrder(o)} style={{...s.btnS(false),display:"flex",alignItems:"center",gap:4,fontSize:11}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Message</button>
+            </div>}
+            {o.status==="disputed"&&<div style={{marginTop:8,padding:12,background:"#fef2f2",borderRadius:t.rs}}>
+              <div style={{fontSize:13,fontWeight:600,color:t.no,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>⚠️ Buyer reported an issue</div>
+              <div style={{fontSize:12,color:t.mut,marginBottom:10}}>Please message the buyer to resolve. Once agreed, choose an action:</div>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                <button onClick={async()=>{
+                  await supabase.from("orders").update({status:"completed"}).eq("id",o.id);
+                  await supabase.from("disputes").update({status:"resolved",resolution:"resolved_by_seller",resolved_at:new Date().toISOString()}).eq("order_id",o.id).eq("status","open");
+                  await supabase.from("messages").insert({order_id:o.id,sender_id:session.user.id,receiver_id:o.buyer_id,body:"✅ This issue has been resolved. Thank you for your patience!"});
+                  loadOrders();showToast("Dispute resolved");
+                }} style={{padding:"6px 12px",borderRadius:20,fontSize:12,fontWeight:600,border:"none",cursor:"pointer",background:t.okBg,color:"#166534"}}>✅ Mark Resolved</button>
+                <button onClick={async()=>{
+                  await supabase.from("orders").update({status:"cancelled"}).eq("id",o.id);
+                  await supabase.from("disputes").update({status:"resolved",resolution:"refund_offered",resolved_at:new Date().toISOString()}).eq("order_id",o.id).eq("status","open");
+                  await supabase.from("messages").insert({order_id:o.id,sender_id:session.user.id,receiver_id:o.buyer_id,body:"💰 A refund has been offered for this order. Please arrange directly."});
+                  loadOrders();showToast("Refund offered");
+                }} style={{padding:"6px 12px",borderRadius:20,fontSize:12,fontWeight:600,border:"none",cursor:"pointer",background:"#dbeafe",color:"#1e40af"}}>💰 Offer Refund</button>
+                <button onClick={()=>setActiveOrder(o)} style={{padding:"6px 12px",borderRadius:20,fontSize:12,fontWeight:600,border:"none",cursor:"pointer",background:t.card,color:t.acc,boxShadow:`inset 0 0 0 1.5px ${t.bdr}`}}>💬 Message Buyer</button>
               </div>
-              {o.status!=="completed"&&o.status!=="cancelled"&&o.status!=="disputed"&&<div>
-                <div style={{fontSize:12,fontWeight:600,marginBottom:6,color:t.mut}}>Update status</div>
-                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                  {[{status:"confirmed",label:"✓ Confirm",bg:"#dbeafe",fg:"#1e40af"},{status:"ready",label:o.method==="pickup"?"📦 Ready for Pickup":"🚗 Out for Delivery",bg:"#fef3c7",fg:"#92400e"},{status:"completed",label:"✅ Completed",bg:t.okBg,fg:"#166534"},{status:"cancelled",label:"✕ Cancel",bg:"#fef2f2",fg:t.no}]
-                  .filter(st=>{ const order=["pending","confirmed","ready","completed"]; const cur=order.indexOf(o.status); const next=order.indexOf(st.status); return next>cur||st.status==="cancelled"; })
-                  .map(st=><button key={st.status} onClick={async()=>{
-                    await supabase.from("orders").update({status:st.status}).eq("id",o.id);
-                    // Auto-message the buyer about status change
-                    const msgs={"confirmed":"Your order has been confirmed! 🎉","ready":o.method==="pickup"?"Your order is ready for pickup! 📦":"Your order is out for delivery! 🚗","completed":"Order complete! Thanks for supporting local bakers 🍰","cancelled":"Unfortunately this order has been cancelled. Please message for details."};
-                    await supabase.from("messages").insert({order_id:o.id,sender_id:session.user.id,receiver_id:o.buyer_id,body:msgs[st.status]||`Order status updated to ${st.status}`});
-                    loadOrders();showToast(`Order ${st.status}`);
-                  }} style={{padding:"6px 12px",borderRadius:20,fontSize:12,fontWeight:600,border:"none",cursor:"pointer",background:st.bg,color:st.fg}}>{st.label}</button>)}
-                </div>
-              </div>}
-              {o.status==="disputed"&&<div style={{marginTop:8,padding:12,background:"#fef2f2",borderRadius:t.rs}}>
-                <div style={{fontSize:13,fontWeight:600,color:t.no,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>⚠️ Buyer reported an issue</div>
-                <div style={{fontSize:12,color:t.mut,marginBottom:10}}>Please message the buyer to resolve. Once agreed, choose an action:</div>
-                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                  <button onClick={async()=>{
-                    await supabase.from("orders").update({status:"completed"}).eq("id",o.id);
-                    await supabase.from("disputes").update({status:"resolved",resolution:"resolved_by_seller",resolved_at:new Date().toISOString()}).eq("order_id",o.id).eq("status","open");
-                    await supabase.from("messages").insert({order_id:o.id,sender_id:session.user.id,receiver_id:o.buyer_id,body:"✅ This issue has been resolved. Thank you for your patience!"});
-                    loadOrders();showToast("Dispute resolved");
-                  }} style={{padding:"6px 12px",borderRadius:20,fontSize:12,fontWeight:600,border:"none",cursor:"pointer",background:t.okBg,color:"#166534"}}>✅ Mark Resolved</button>
-                  <button onClick={async()=>{
-                    await supabase.from("orders").update({status:"cancelled"}).eq("id",o.id);
-                    await supabase.from("disputes").update({status:"resolved",resolution:"refund_offered",resolved_at:new Date().toISOString()}).eq("order_id",o.id).eq("status","open");
-                    await supabase.from("messages").insert({order_id:o.id,sender_id:session.user.id,receiver_id:o.buyer_id,body:"💰 A refund has been offered for this order. Please arrange directly."});
-                    loadOrders();showToast("Refund offered");
-                  }} style={{padding:"6px 12px",borderRadius:20,fontSize:12,fontWeight:600,border:"none",cursor:"pointer",background:"#dbeafe",color:"#1e40af"}}>💰 Offer Refund</button>
-                  <button onClick={()=>setActiveOrder(o)} style={{padding:"6px 12px",borderRadius:20,fontSize:12,fontWeight:600,border:"none",cursor:"pointer",background:t.card,color:t.acc,boxShadow:`inset 0 0 0 1.5px ${t.bdr}`}}>💬 Message Buyer</button>
-                </div>
-              </div>}
-              <div style={{fontSize:10,color:t.lit,marginTop:6}}>{new Date(o.created_at).toLocaleString("en-AU",{day:"numeric",month:"short",year:"numeric",hour:"numeric",minute:"2-digit"})}</div>
-            </div>)}
-          </>}
+            </div>}
+            <div style={{fontSize:10,color:t.lit,marginTop:6}}>{new Date(o.created_at).toLocaleString("en-AU",{day:"numeric",month:"short",year:"numeric",hour:"numeric",minute:"2-digit"})}</div>
+          </div>)}
         </>}
 
         {/* Messages tab */}
@@ -789,7 +762,6 @@ const Sell=()=>{
           <div style={{...s.card,padding:20,marginBottom:16}}>
             <div style={{fontWeight:700,fontSize:16,marginBottom:4}}>Email Notifications</div>
             <div style={{fontSize:13,color:t.mut,marginBottom:16}}>Choose which emails you'd like to receive. {notifSaving&&<span style={{color:t.acc}}>Saving...</span>}</div>
-
             {notifPrefs&&<div style={{display:"flex",flexDirection:"column",gap:4}}>
               {[
                 {key:"email_new_order",label:"New orders",desc:"Get notified when someone places an order from your kitchen",icon:"🛒"},
@@ -809,17 +781,14 @@ const Sell=()=>{
               </label>)}
             </div>}
           </div>
-
           <div style={{...s.tip,background:"#eff6ff",color:"#1e40af",marginBottom:16}}>
             Email notifications will be sent to <strong>{session.user.email}</strong>. Push notifications are coming soon!
           </div>
-
           <div style={{...s.card,padding:20,marginBottom:16}}>
             <div style={{fontWeight:700,fontSize:16,marginBottom:12}}>Account</div>
             <button onClick={()=>{setEpFirst(profile?.first_name||"");setEpLast(profile?.last_name||"");setEpPhone(profile?.phone||"");setEpAddress(profile?.address||"");setEpSuburb(profile?.suburb||"");setEpState(profile?.state||"WA");setEpPostcode(profile?.postcode||"");setEditingProfile(true);}} style={{...s.btn(false),marginBottom:8,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}><I d={ic.edit} s={16}/> Edit Profile</button>
             {bp.mobile&&<button style={{...s.btn(false),display:"flex",alignItems:"center",justifyContent:"center",gap:8,color:t.no}} onClick={handleLogout}><I d={ic.logout} s={16} c={t.no}/> Sign Out</button>}
           </div>
-
           <div style={{...s.card,padding:20}}>
             <div style={{fontWeight:700,fontSize:16,marginBottom:4,color:t.no}}>Danger zone</div>
             <div style={{fontSize:13,color:t.mut,marginBottom:12}}>Permanently delete your account and all associated data.</div>
@@ -852,6 +821,7 @@ const Sell=()=>{
       {lightbox.images[lightbox.index].caption&&<div style={{color:"#fff",fontSize:15,marginTop:12,textAlign:"center",padding:"0 20px",maxWidth:500,lineHeight:1.5}}>{lightbox.images[lightbox.index].caption}</div>}
       {lightbox.images.length>1&&lightbox.images.length<=12&&<div style={{display:"flex",gap:6,marginTop:16}}>{lightbox.images.map((_,i)=><button key={i} onClick={e=>{e.stopPropagation();lbGo(i);}} style={{width:8,height:8,borderRadius:4,border:"none",cursor:"pointer",background:i===lightbox.index?"#fff":"rgba(255,255,255,0.3)"}}/>)}</div>}
     </div>}
+    {/* FIX: NavBar only rendered once here — duplicate mobile nav at bottom removed */}
     <NavBar/>
     <div style={s.shell}>
       {view?.type==="seller"?<SellerPage x={view.data}/>
@@ -860,6 +830,5 @@ const Sell=()=>{
         :tab==="account"?<Account/>
         :<Sell/>}
     </div>
-    {bp.mobile&&<nav style={s.nav}>{navItems.map(x=><button key={x.id} style={s.navB(tab===x.id&&!view)} onClick={()=>handleNavClick(x.id)}><I d={x.icon} s={22}/><span>{x.label}</span></button>)}</nav>}
   </div>;
 }
