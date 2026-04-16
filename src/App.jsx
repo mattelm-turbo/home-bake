@@ -201,9 +201,15 @@ export default function App(){
       console.log("[sendEmailIfEnabled] Checking pref — userId:",userId,"prefKey:",prefKey,"to:",to||"MISSING EMAIL");
       if(!to){console.warn("[sendEmailIfEnabled] Skipping — no email address for user",userId);return;}
       const{data,error}=await supabase.from("notification_prefs").select(prefKey).eq("id",userId).single();
-      console.log("[sendEmailIfEnabled] Pref lookup result — data:",JSON.stringify(data),"error:",error?.message||null);
-      if(data?.[prefKey]){console.log("[sendEmailIfEnabled] Pref enabled — sending email");await sendEmail(to,subject,html);}
-      else console.warn("[sendEmailIfEnabled] Pref disabled or row missing — skipping email");
+      // If no row exists, default to sending the email
+      if(error||!data){
+        console.warn("[sendEmailIfEnabled] No prefs row found — sending email anyway");
+        await sendEmail(to,subject,html);
+        return;
+      }
+      console.log("[sendEmailIfEnabled] Pref lookup result — data:",JSON.stringify(data));
+      if(data[prefKey]){console.log("[sendEmailIfEnabled] Pref enabled — sending email");await sendEmail(to,subject,html);}
+      else console.warn("[sendEmailIfEnabled] Pref disabled — skipping email");
     }catch(e){console.error("[sendEmailIfEnabled] Exception:",e);}
   }
   function emailHtml(title,body){
