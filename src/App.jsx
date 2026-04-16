@@ -190,14 +190,21 @@ export default function App(){
 
   // ─── Email Helpers ────────────────────────────────────────────────────────
   async function sendEmail(to,subject,html){
-    try{await supabase.functions.invoke("send-notification",{body:{to,subject,html}});}
-    catch(e){console.error("Email error:",e);}
+    try{
+      console.log("[sendEmail] Invoking edge function — to:",to,"subject:",subject);
+      const res=await supabase.functions.invoke("send-notification",{body:{to,subject,html}});
+      console.log("[sendEmail] Edge function response:",JSON.stringify(res));
+    }catch(e){console.error("[sendEmail] Exception:",e);}
   }
   async function sendEmailIfEnabled(userId,prefKey,to,subject,html){
     try{
-      const{data}=await supabase.from("notification_prefs").select(prefKey).eq("id",userId).single();
-      if(data?.[prefKey])await sendEmail(to,subject,html);
-    }catch(e){console.error("Notif pref error:",e);}
+      console.log("[sendEmailIfEnabled] Checking pref — userId:",userId,"prefKey:",prefKey,"to:",to||"MISSING EMAIL");
+      if(!to){console.warn("[sendEmailIfEnabled] Skipping — no email address for user",userId);return;}
+      const{data,error}=await supabase.from("notification_prefs").select(prefKey).eq("id",userId).single();
+      console.log("[sendEmailIfEnabled] Pref lookup result — data:",JSON.stringify(data),"error:",error?.message||null);
+      if(data?.[prefKey]){console.log("[sendEmailIfEnabled] Pref enabled — sending email");await sendEmail(to,subject,html);}
+      else console.warn("[sendEmailIfEnabled] Pref disabled or row missing — skipping email");
+    }catch(e){console.error("[sendEmailIfEnabled] Exception:",e);}
   }
   function emailHtml(title,body){
     return`<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
@@ -578,6 +585,7 @@ export default function App(){
       setNotifSaving(false);
     };
     const sendMessage=async()=>{
+      console.log("[sendMessage] Called — input:",msgInput.trim(),"orderId:",activeOrder?.id);
       if(!msgInput.trim()||!activeOrder)return;
       const receiverId=activeOrder.buyer_id===session.user.id?activeOrder.seller_id:activeOrder.buyer_id;
       await supabase.from("messages").insert({order_id:activeOrder.id,sender_id:session.user.id,receiver_id:receiverId,body:msgInput.trim()});
