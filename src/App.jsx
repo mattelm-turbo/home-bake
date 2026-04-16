@@ -136,7 +136,45 @@ export default function App(){
     const{error}=await supabase.from("menu_items").insert({seller_id:session.user.id,name:item.name,category:item.cat,price:parseFloat(item.price),description:item.desc,emoji:item.emoji,allergens:item.allergens});if(error){showToast("Error adding");return false;}await loadProfile(session.user.id);await loadSellers();return true;}
   async function removeMenuItem(id){await supabase.from("menu_items").delete().eq("id",id);await loadProfile(session.user.id);await loadSellers();}
   async function loadMyMenu(){if(!session?.user)return[];const{data}=await supabase.from("menu_items").select("*").eq("seller_id",session.user.id).eq("active",true);return data||[];}
-  async function placeOrder(items,method,addr){const grouped={};items.forEach(({seller,item,qty})=>{if(!grouped[seller.id])grouped[seller.id]={seller,items:[]};grouped[seller.id].items.push({item,qty});});for(const g of Object.values(grouped)){const total=g.items.reduce((s,i)=>s+i.item.price*i.qty,0)+(method==="delivery"?8.5:0);const{data:ord,error}=await supabase.from("orders").insert({buyer_id:session.user.id,seller_id:g.seller.id,method,delivery_address:addr,total,notes:""}).select().single();if(error||!ord){showToast("Error");return null;}await supabase.from("order_items").insert(g.items.map(i=>({order_id:ord.id,menu_item_id:i.item.id,item_name:i.item.name,quantity:i.qty,unit_price:i.item.price})));}return true;}
+  async function placeOrder(items,method,addr){
+    const grouped={};
+    items.forEach(({seller,item,qty})=>{if(!grouped[seller.id])grouped[seller.id]={seller,items:[]};grouped[seller.id].items.push({item,qty});});
+    for(const g of Object.values(grouped)){
+      const total=g.items.reduce((s,i)=>s+i.item.price*i.qty,0)+(method==="delivery"?8.5:0);
+      const{data:ord,error}=await supabase.from("orders").insert({buyer_id:session.user.id,seller_id:g.seller.id,method,delivery_address:addr,total,notes:""}).select().single();
+      if(error||!ord){showToast("Error");return null;}
+      await supabase.from("order_items").insert(g.items.map(i=>({order_id:ord.id,menu_item_id:i.item.id,item_name:i.item.name,quantity:i.qty,unit_price:i.item.price})));
+      // Email seller — new order
+      const{data:sellerProfile}=await supabase.from("profiles").select("email").eq("id",g.seller.id).single();
+      if(sellerProfile?.email){
+        const itemList=g.items.map(i=>`${i.qty}× ${i.item.name}`).join(", ");
+        await sendEmailIfEnabled(g.seller.id,"email_new_order",sellerProfile.email,
+          "🛒 New order on HomeBaked!",
+          emailHtml("You have a new order!",
+            `<p>Someone just ordered from your kitchen:</p>
+             <p style="background:#fef3c7;padding:12px;border-radius:8px"><strong>${itemList}</strong></p>
+             <p><strong>Method:</strong> ${method==="pickup"?"📦 Pickup":"🚗 Delivery"}<br/>
+             <strong>Total:</strong> ${total.toFixed(2)}</p>
+             <p>Log in to confirm and manage the order.</p>
+             <a href="https://home-bake.pages.dev" style="display:inline-block;margin-top:8px;padding:10px 20px;background:#c2410c;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">View Order</a>`
+          )
+        );
+      }
+      // Email buyer — order confirmation
+      await sendEmailIfEnabled(session.user.id,"email_order_update",session.user.email,
+        "✅ Order confirmed — HomeBaked",
+        emailHtml("Your order is confirmed!",
+          `<p>Thanks for ordering from <strong>${g.seller.name}</strong>!</p>
+           <p style="background:#fef3c7;padding:12px;border-radius:8px">${g.items.map(i=>`${i.qty}× ${i.item.name}`).join("<br/>")}</p>
+           <p><strong>Method:</strong> ${method==="pickup"?"📦 Pickup":"🚗 Delivery"}<br/>
+           <strong>Total:</strong> ${total.toFixed(2)}</p>
+           <p>The seller will confirm your order shortly. You can message them in the app.</p>
+           <a href="https://home-bake.pages.dev" style="display:inline-block;margin-top:8px;padding:10px 20px;background:#c2410c;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">View Order</a>`
+        )
+      );
+    }
+    return true;
+  }
 
   // ─── Places Search ────────────────────────────────────────────────────────
   const searchPlaces=async(input)=>{if(!input||input.length<3||!window.google?.maps?.places){setPlaceSuggestions([]);return;}try{const{suggestions}=await google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions({input,includedRegionCodes:["au"],includedPrimaryTypes:["geocode"]});if(suggestions?.length){setPlaceSuggestions(suggestions.map(s=>({description:s.placePrediction.text.text,place_id:s.placePrediction.placeId})));setShowDropdown(true);}else setPlaceSuggestions([]);}catch(e){console.error("Places error:",e);setPlaceSuggestions([]);}};
@@ -149,6 +187,28 @@ export default function App(){
   const handleGoogleLogin=async()=>{const{error}=await supabase.auth.signInWithOAuth({provider:"google",options:{redirectTo:window.location.origin}});if(error)setAuthErr(error.message);};
   const handleLogout=async()=>{await supabase.auth.signOut();setProfile(null);setCart([]);setOrder(null);setTab("browse");setView(null);setChosenSuburb(null);};
   const requireAuth=(returnTo)=>{if(!session){setAuthReturnTo(returnTo);setShowAuth(true);setAuthScreen("login");return false;}return true;};
+
+  // ─── Email Helpers ────────────────────────────────────────────────────────
+  async function sendEmail(to,subject,html){
+    try{await supabase.functions.invoke("send-notification",{body:{to,subject,html}});}
+    catch(e){console.error("Email error:",e);}
+  }
+  async function sendEmailIfEnabled(userId,prefKey,to,subject,html){
+    try{
+      const{data}=await supabase.from("notification_prefs").select(prefKey).eq("id",userId).single();
+      if(data?.[prefKey])await sendEmail(to,subject,html);
+    }catch(e){console.error("Notif pref error:",e);}
+  }
+  function emailHtml(title,body){
+    return`<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
+      <div style="margin-bottom:20px"><span style="font-size:22px;font-weight:800"><span style="color:#c2410c">Home</span>Baked</span></div>
+      <h2 style="font-size:18px;margin:0 0 12px">${title}</h2>
+      <div style="font-size:14px;line-height:1.7;color:#44403c">${body}</div>
+      <div style="margin-top:28px;padding-top:16px;border-top:1px solid #e7e5e4;font-size:11px;color:#a8a29e">
+        HomeBaked · <a href="https://home-bake.pages.dev" style="color:#c2410c">home-bake.pages.dev</a>
+      </div>
+    </div>`;
+  }
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
   const showToast=msg=>{setToast(msg);setTimeout(()=>setToast(null),2500);};
@@ -521,6 +581,19 @@ export default function App(){
       if(!msgInput.trim()||!activeOrder)return;
       const receiverId=activeOrder.buyer_id===session.user.id?activeOrder.seller_id:activeOrder.buyer_id;
       await supabase.from("messages").insert({order_id:activeOrder.id,sender_id:session.user.id,receiver_id:receiverId,body:msgInput.trim()});
+      // Email recipient about new message
+      const{data:receiverProfile}=await supabase.from("profiles").select("email,first_name").eq("id",receiverId).single();
+      if(receiverProfile?.email){
+        await sendEmailIfEnabled(receiverId,"email_new_message",receiverProfile.email,
+          "💬 New message on HomeBaked",
+          emailHtml("You have a new message",
+            `<p>Hi ${receiverProfile.first_name||"there"},</p>
+             <p><strong>${profile.first_name}</strong> sent you a message about order #${activeOrder.id.slice(0,8)}:</p>
+             <p style="background:#f5f5f4;padding:12px;border-radius:8px;font-style:italic">"${msgInput.trim().slice(0,200)}"</p>
+             <a href="https://home-bake.pages.dev" style="display:inline-block;margin-top:12px;padding:10px 20px;background:#c2410c;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">Reply in App</a>`
+          )
+        );
+      }
       setMsgInput("");loadMessages(activeOrder.id);
     };
 
@@ -551,6 +624,21 @@ export default function App(){
             await supabase.from("orders").update({status:"disputed"}).eq("id",reportingOrder.id);
             const reasonLabels={wrong_item:"wrong item received",quality_issue:"quality not as described",damaged:"item arrived damaged",not_received:"order not received",other:"an issue"};
             await supabase.from("messages").insert({order_id:reportingOrder.id,sender_id:session.user.id,receiver_id:reportingOrder.seller_id,body:`⚠️ Issue reported: ${reasonLabels[disputeReason]||"an issue"}. "${disputeDesc.trim().slice(0,200)}". Please respond to resolve this.`});
+            // Email seller about dispute
+            const{data:sellerProfile}=await supabase.from("profiles").select("email,first_name").eq("id",reportingOrder.seller_id).single();
+            if(sellerProfile?.email){
+              await sendEmailIfEnabled(reportingOrder.seller_id,"email_dispute",sellerProfile.email,
+                "⚠️ A buyer has reported an issue — HomeBaked",
+                emailHtml("A buyer reported an issue with their order",
+                  `<p>Hi ${sellerProfile.first_name||"there"},</p>
+                   <p><strong>${profile.first_name}</strong> has reported an issue with order #${reportingOrder.id.slice(0,8)}:</p>
+                   <p><strong>Reason:</strong> ${reasonLabels[disputeReason]||disputeReason}</p>
+                   <p style="background:#fef2f2;padding:12px;border-radius:8px">"${disputeDesc.trim().slice(0,300)}"</p>
+                   <p>Please log in and message the buyer to resolve this.</p>
+                   <a href="https://home-bake.pages.dev" style="display:inline-block;margin-top:12px;padding:10px 20px;background:#c2410c;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">Respond Now</a>`
+                )
+              );
+            }
             setDisputeSubmitting(false);setReportingOrder(null);setDisputeReason("");setDisputeDesc("");
             loadOrders();showToast("Issue reported — the seller has been notified");
           }}>{disputeSubmitting?"Submitting...":"Submit Report"}</button>
@@ -752,6 +840,20 @@ export default function App(){
                   await supabase.from("orders").update({status:st.status}).eq("id",o.id);
                   const msgs={"confirmed":"Your order has been confirmed! 🎉","ready":o.method==="pickup"?"Your order is ready for pickup! 📦":"Your order is out for delivery! 🚗","completed":"Order complete! Thanks for supporting local bakers 🍰","cancelled":"Unfortunately this order has been cancelled. Please message for details."};
                   await supabase.from("messages").insert({order_id:o.id,sender_id:session.user.id,receiver_id:o.buyer_id,body:msgs[st.status]||`Order status updated to ${st.status}`});
+                  // Email buyer about status change
+                  const{data:buyerProfile}=await supabase.from("profiles").select("email").eq("id",o.buyer_id).single();
+                  if(buyerProfile?.email){
+                    const statusMessages={
+                      confirmed:{subject:"✅ Order confirmed — HomeBaked",title:"Your order has been confirmed!",body:`<p>Great news! <strong>${profile.name}</strong> has confirmed your order.</p><p>They'll let you know when it's ready.</p>`},
+                      ready:o.method==="pickup"
+                        ?{subject:"📦 Ready for pickup — HomeBaked",title:"Your order is ready for pickup!",body:`<p>Your order from <strong>${profile.name}</strong> is ready to collect.</p><p>Contact the seller to arrange pickup.</p>`}
+                        :{subject:"🚗 Out for delivery — HomeBaked",title:"Your order is on its way!",body:`<p>Your order from <strong>${profile.name}</strong> is out for delivery.</p>`},
+                      completed:{subject:"🍰 Order complete — HomeBaked",title:"Order complete!",body:`<p>Your order from <strong>${profile.name}</strong> has been marked complete.</p><p>Thanks for supporting a local baker!</p>`},
+                      cancelled:{subject:"Order cancelled — HomeBaked",title:"Your order has been cancelled",body:`<p>Unfortunately your order from <strong>${profile.name}</strong> has been cancelled.</p><p>Please message the seller for more details.</p>`},
+                    };
+                    const em=statusMessages[st.status];
+                    if(em)await sendEmailIfEnabled(o.buyer_id,"email_order_update",buyerProfile.email,em.subject,emailHtml(em.title,em.body+`<a href="https://home-bake.pages.dev" style="display:inline-block;margin-top:12px;padding:10px 20px;background:#c2410c;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">View Order</a>`));
+                  }
                   loadOrders();showToast(`Order ${st.status}`);
                 }} style={{padding:"6px 12px",borderRadius:20,fontSize:12,fontWeight:600,border:"none",cursor:"pointer",background:st.bg,color:st.fg}}>{st.label}</button>)}
               </div>
