@@ -43,7 +43,11 @@ function getDistance(lat1,lng1,lat2,lng2){const R=6371,dLat=(lat2-lat1)*Math.PI/
 function useBreakpoint(){const[w,setW]=useState(typeof window!=="undefined"?window.innerWidth:400);useEffect(()=>{const h=()=>setW(window.innerWidth);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h);},[]);return{mobile:w<640,tablet:w>=640&&w<1024,desktop:w>=1024};}
 
 const t={bg:"#faf7f2",card:"#fff",pri:"#c2410c",priL:"#fed7aa",acc:"#ea580c",txt:"#1c1917",mut:"#78716c",lit:"#a8a29e",bdr:"#e7e5e4",ok:"#16a34a",okBg:"#dcfce7",no:"#dc2626",r:"14px",rs:"10px",sh:"0 1px 3px rgba(0,0,0,0.06)",shLg:"0 4px 16px rgba(0,0,0,0.08)"};
-const Stars=({r})=><span style={{color:"#f59e0b",fontSize:13}}>{"★".repeat(Math.round(r))}{"☆".repeat(5-Math.round(r))} <span style={{color:t.mut,fontWeight:500}}>{r}</span></span>;
+const Stars=({r,interactive=false,onSelect=null})=>{
+  if(interactive)return<span style={{fontSize:24,cursor:"pointer"}}>{[1,2,3,4,5].map(n=><span key={n} onClick={()=>onSelect&&onSelect(n)} style={{color:n<=r?"#f59e0b":"#d1d5db",marginRight:2}}>★</span>)}</span>;
+  if(!r)return<span style={{color:t.lit,fontSize:13}}>No reviews yet</span>;
+  return<span style={{color:"#f59e0b",fontSize:13}}>{"★".repeat(Math.round(r))}{"☆".repeat(5-Math.round(r))} <span style={{color:t.mut,fontWeight:500}}>{r}</span></span>;
+};
 const GoogleIcon=()=><svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18A11.96 11.96 0 0 0 1 12c0 1.94.46 3.77 1.18 5.07l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>;
 
 const mkCss=bp=>{const mob=bp.mobile,px=mob?16:bp.tablet?24:32;return{
@@ -115,7 +119,14 @@ export default function App(){
 
   // ─── DB Functions ─────────────────────────────────────────────────────────
   async function loadProfile(uid){const{data}=await supabase.from("profiles").select("*").eq("id",uid).single();if(data){setProfile(data);setProfileIncomplete(!data.phone||!data.address||!data.suburb||!data.first_name);}else{setProfile(null);setProfileIncomplete(false);}}
-  async function loadSellers(){const{data}=await supabase.from("profiles").select(`*, menu_items(*), gallery_images(*)`).neq("suburb","").order("created_at",{ascending:false});if(data)setSellers(data.filter(p=>p.menu_items?.length>0).map(p=>({...p,menu:p.menu_items.filter(m=>m.active),gallery:p.gallery_images||[],rating:4.5+Math.round(Math.random()*5)/10,reviews:Math.floor(Math.random()*50)+5})));}
+  async function loadSellers(){
+    const{data}=await supabase.from("profiles").select(`*, menu_items(*), gallery_images(*), reviews(*)`).neq("suburb","").order("created_at",{ascending:false});
+    if(data)setSellers(data.filter(p=>p.menu_items?.length>0).map(p=>{
+      const revs=p.reviews||[];
+      const avg=revs.length?Math.round((revs.reduce((a,r)=>a+r.rating,0)/revs.length)*10)/10:null;
+      return{...p,menu:p.menu_items.filter(m=>m.active),gallery:p.gallery_images||[],rating:avg,reviewCount:revs.length,reviewList:revs};
+    }));
+  }
   async function geocodeSuburb(suburb,state){
     if(!window.google?.maps)return null;
     try{
@@ -414,7 +425,7 @@ export default function App(){
         {list.length===0&&<div style={{textAlign:"center",padding:40,color:t.mut}}><div style={{fontSize:44,marginBottom:8}}>🍰</div><div style={{fontWeight:600}}>No bakers found nearby</div><div style={{fontSize:13,marginTop:4}}>Try a different suburb or be the first to sell!</div></div>}
         <div style={s.grid}>{list.map(x=><div key={x.id} style={{...s.card,cursor:"pointer"}} onClick={()=>go({type:"seller",data:x})} onMouseEnter={e=>{e.currentTarget.style.boxShadow=t.shLg}} onMouseLeave={e=>{e.currentTarget.style.boxShadow=t.sh}}>
           <div style={{padding:16}}><div style={{display:"flex",gap:12,alignItems:"center"}}><div style={{width:52,height:52,borderRadius:14,background:t.priL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,flexShrink:0,overflow:"hidden"}}>{x.shop_image_url?<img src={x.shop_image_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:(x.avatar_emoji||"🍰")}</div>
-            <div style={{flex:1,minWidth:0}}><div style={{display:"flex",alignItems:"center",gap:6}}><span style={{fontWeight:700,fontSize:15}}>{x.name}</span>{x.cuisine&&<span style={{fontSize:14}}>{CUISINES.find(c=>c.name===x.cuisine)?.flag}</span>}{x.verified&&<span style={{fontSize:11,color:t.ok}}>✓</span>}</div><div style={{fontSize:12,color:t.mut,marginTop:1}}>{x.suburb}{x.dist>0&&x.dist<999?` · ${x.dist}km`:""}</div><div style={{marginTop:3}}><Stars r={x.rating}/> <span style={{fontSize:11,color:t.lit}}>({x.reviews})</span></div></div></div>
+            <div style={{flex:1,minWidth:0}}><div style={{display:"flex",alignItems:"center",gap:6}}><span style={{fontWeight:700,fontSize:15}}>{x.name}</span>{x.cuisine&&<span style={{fontSize:14}}>{CUISINES.find(c=>c.name===x.cuisine)?.flag}</span>}{x.verified&&<span style={{fontSize:11,color:t.ok}}>✓</span>}</div><div style={{fontSize:12,color:t.mut,marginTop:1}}>{x.suburb}{x.dist>0&&x.dist<999?` · ${x.dist}km`:""}</div>                <div style={{marginTop:3}}><Stars r={x.rating}/> <span style={{fontSize:11,color:t.lit}}>{x.reviewCount>0?`(${x.reviewCount})`:"(0)"}</span></div></div></div>
             <div style={{display:"flex",gap:5,marginTop:10,flexWrap:"wrap"}}>{x.pickup&&<span style={s.badge(t.okBg,"#166534")}>Pickup</span>}{x.delivery&&<span style={s.badge("#dbeafe","#1e40af")}>Delivery</span>}</div>
             <div style={{display:"flex",gap:4,marginTop:8}}>{x.menu.slice(0,3).map(m=><div key={m.id} style={{width:40,height:40,borderRadius:8,background:"#fef3c7",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>{m.emoji}</div>)}{x.menu.length>3&&<div style={{width:40,height:40,borderRadius:8,background:t.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:t.mut,fontWeight:600}}>+{x.menu.length-3}</div>}</div>
           </div></div>)}</div>
@@ -426,7 +437,7 @@ export default function App(){
   const SellerPage=({x})=>{const[mc,setMc]=useState("All");const cats=["All",...new Set(x.menu.map(m=>m.category))];const items=mc==="All"?x.menu:x.menu.filter(m=>m.category===mc);
     return<>{mobileHeader}<div style={s.hdr}><button style={s.bck} onClick={back}><I d={ic.back}/></button><span style={s.hdrT}>{x.name}</span></div>
       <div style={s.sec}><div style={{...s.card,padding:bp.mobile?18:24,marginBottom:16}}><div style={{display:"flex",gap:14,alignItems:"center",marginBottom:10}}><div style={{width:bp.mobile?60:72,height:bp.mobile?60:72,borderRadius:18,background:t.priL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:bp.mobile?30:36,overflow:"hidden"}}>{x.shop_image_url?<img src={x.shop_image_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:(x.avatar_emoji||"🍰")}</div>
-        <div><div style={{fontWeight:700,fontSize:bp.mobile?17:20}}>{x.name}</div><div style={{fontSize:13,color:t.mut}}>{x.suburb}, {x.state}{x.dist<999?` · ${x.dist}km`:""}</div><Stars r={x.rating}/> <span style={{fontSize:11,color:t.lit}}>({x.reviews} reviews)</span></div></div>
+        <div><div style={{fontWeight:700,fontSize:bp.mobile?17:20}}>{x.name}</div><div style={{fontSize:13,color:t.mut}}>{x.suburb}, {x.state}{x.dist<999?` · ${x.dist}km`:""}</div><Stars r={x.rating}/> <span style={{fontSize:11,color:t.lit}}>{x.reviewCount>0?`(${x.reviewCount} reviews)`:"(No reviews yet)"}</span></div></div>
         <p style={{fontSize:14,color:t.mut,lineHeight:1.6,margin:"0 0 10px"}}>{x.bio}</p><div style={{display:"flex",gap:5}}>{x.pickup&&<span style={s.badge(t.okBg,"#166534")}>📦 Pickup</span>}{x.delivery&&<span style={s.badge("#dbeafe","#1e40af")}>🚗 Delivery</span>}</div></div>
         <div style={{fontWeight:700,fontSize:15,marginBottom:8}}>Menu</div><div style={{display:"flex",gap:6,overflowX:"auto",marginBottom:12}}>{cats.map(c=><button key={c} onClick={()=>setMc(c)} style={{...s.btnS(mc===c),whiteSpace:"nowrap",flexShrink:0}}>{c}</button>)}</div>
         <div style={s.menuGrid}>{items.map(item=><div key={item.id} style={s.card}><div style={{padding:14}}><div style={{display:"flex",gap:12}}><div style={{width:68,height:68,borderRadius:12,background:"#fef3c7",display:"flex",alignItems:"center",justifyContent:"center",fontSize:34,flexShrink:0}}>{item.emoji}</div>
@@ -437,6 +448,18 @@ export default function App(){
             {x.gallery.map((img,i)=><div key={img.id} onClick={()=>openLightbox(x.gallery,i)} style={{position:"relative",paddingBottom:"100%",borderRadius:12,overflow:"hidden",background:t.bg,cursor:"pointer"}}>
               <img src={img.image_url} alt={img.caption||""} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>
               {img.caption&&<div style={{position:"absolute",bottom:0,left:0,right:0,padding:"16px 8px 6px",background:"linear-gradient(transparent,rgba(0,0,0,0.6))",color:"#fff",fontSize:11,fontWeight:500}}>{img.caption}</div>}
+            </div>)}
+          </div>
+        </>}
+        {x.reviewList?.length>0&&<>
+          <div style={{fontWeight:700,fontSize:15,marginTop:20,marginBottom:10}}>Reviews ({x.reviewCount})</div>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {x.reviewList.map(r=><div key={r.id} style={{...s.card,padding:14}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                <span style={{color:"#f59e0b",fontSize:15}}>{"★".repeat(r.rating)}{"☆".repeat(5-r.rating)}</span>
+                <span style={{fontSize:11,color:t.lit}}>{new Date(r.created_at).toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"})}</span>
+              </div>
+              {r.comment&&<p style={{fontSize:13,color:t.mut,margin:0,lineHeight:1.5}}>{r.comment}</p>}
             </div>)}
           </div>
         </>}
@@ -560,11 +583,24 @@ export default function App(){
     const[disputeSubmitting,setDisputeSubmitting]=useState(false);
     const[notifPrefs,setNotifPrefs]=useState(null);
     const[notifSaving,setNotifSaving]=useState(false);
+    const[reviewingOrder,setReviewingOrder]=useState(null);
+    const[reviewRating,setReviewRating]=useState(0);
+    const[reviewComment,setReviewComment]=useState("");
+    const[reviewSubmitting,setReviewSubmitting]=useState(false);
+    const[reviewedOrderIds,setReviewedOrderIds]=useState([]);
     const msgEndRef=useRef(null);
 
     useEffect(()=>{loadOrders();loadUnread();loadNotifPrefs();},[]);
     useEffect(()=>{if(activeOrder)loadMessages(activeOrder.id);},[activeOrder]);
     useEffect(()=>{msgEndRef.current?.scrollIntoView({behavior:"smooth"});},[messages]);
+    useEffect(()=>{if(orders.length)loadReviewedOrders();},[orders]);
+
+    const loadReviewedOrders=async()=>{
+      const orderIds=orders.filter(o=>o.buyer_id===session.user.id).map(o=>o.id);
+      if(!orderIds.length)return;
+      const{data}=await supabase.from("reviews").select("order_id").in("order_id",orderIds);
+      setReviewedOrderIds((data||[]).map(r=>r.order_id));
+    };
 
     const loadOrders=async()=>{
       const{data}=await supabase.from("orders").select(`*,order_items(*),buyer:profiles!orders_buyer_id_fkey(name,suburb),seller:profiles!orders_seller_id_fkey(name,suburb,avatar_emoji,shop_image_url)`).or(`buyer_id.eq.${session.user.id},seller_id.eq.${session.user.id}`).order("created_at",{ascending:false});
@@ -610,6 +646,41 @@ export default function App(){
       }
       setMsgInput("");loadMessages(activeOrder.id);
     };
+
+    // ─── Review Form View ───────────────────────────────────────────────
+    if(reviewingOrder){
+      return<>{mobileHeader}<div style={s.hdr}><button style={s.bck} onClick={()=>{setReviewingOrder(null);setReviewRating(0);setReviewComment("");}}><I d={ic.back}/></button><span style={s.hdrT}>Leave a Review</span></div>
+        <div style={{...s.sec,maxWidth:500,margin:"0 auto"}}>
+          <div style={{...s.card,padding:14,marginBottom:16}}>
+            <div style={{fontSize:13,color:t.mut}}>Order from <strong>{reviewingOrder.seller?.name}</strong></div>
+            <div style={{fontSize:12,color:t.lit,marginTop:2}}>{reviewingOrder.order_items?.map(oi=>`${oi.quantity}x ${oi.item_name}`).join(", ")}</div>
+          </div>
+          <div style={{...s.card,padding:20,marginBottom:16}}>
+            <div style={{fontWeight:600,fontSize:15,marginBottom:16}}>How was your experience?</div>
+            <div style={{marginBottom:20}}>
+              <div style={{fontSize:13,color:t.mut,marginBottom:8}}>Rating *</div>
+              <div style={{display:"flex",gap:8}}>
+                {[1,2,3,4,5].map(n=><button key={n} onClick={()=>setReviewRating(n)} style={{width:48,height:48,borderRadius:12,border:reviewRating>=n?`2px solid #f59e0b`:`1.5px solid ${t.bdr}`,background:reviewRating>=n?"#fef3c7":t.card,fontSize:24,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>★</button>)}
+              </div>
+              {reviewRating>0&&<div style={{fontSize:12,color:t.mut,marginTop:8}}>{["","Terrible","Poor","OK","Good","Excellent!"][reviewRating]}</div>}
+            </div>
+            <div>
+              <div style={{fontSize:13,color:t.mut,marginBottom:6}}>Comment (optional)</div>
+              <textarea style={{...s.ta,minHeight:100}} placeholder="Tell others about your experience..." value={reviewComment} onChange={e=>setReviewComment(e.target.value)}/>
+            </div>
+          </div>
+          <button style={{...s.btn(true),opacity:(reviewRating>0&&!reviewSubmitting)?1:0.5}} disabled={reviewRating===0||reviewSubmitting} onClick={async()=>{
+            setReviewSubmitting(true);
+            const{error}=await supabase.from("reviews").insert({order_id:reviewingOrder.id,buyer_id:session.user.id,seller_id:reviewingOrder.seller_id,rating:reviewRating,comment:reviewComment.trim()||null});
+            if(error){showToast("Error submitting review");setReviewSubmitting(false);return;}
+            await loadSellers();
+            setReviewedOrderIds(p=>[...p,reviewingOrder.id]);
+            setReviewSubmitting(false);setReviewingOrder(null);setReviewRating(0);setReviewComment("");
+            showToast("Review submitted! ⭐");
+          }}>{reviewSubmitting?"Submitting...":"Submit Review"}</button>
+        </div>
+      </>;
+    }
 
     // ─── Report Issue View ──────────────────────────────────────────────
     if(reportingOrder){
@@ -823,8 +894,10 @@ export default function App(){
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
               <span style={{...s.badge(o.status==="completed"?t.okBg:o.status==="cancelled"?"#fef2f2":o.status==="disputed"?"#fef2f2":"#fefce8",o.status==="completed"?"#166534":o.status==="cancelled"?t.no:o.status==="disputed"?t.no:"#854d0e")}}>{o.status==="disputed"?"⚠️ disputed":o.status}</span>
               <div style={{display:"flex",gap:6}}>
+                {o.status==="completed"&&!reviewedOrderIds.includes(o.id)&&<button onClick={()=>{setReviewingOrder(o);setReviewRating(0);setReviewComment("");}} style={{...s.btnS(true),display:"flex",alignItems:"center",gap:4,fontSize:11}}>⭐ Review</button>}
+                {o.status==="completed"&&reviewedOrderIds.includes(o.id)&&<span style={{...s.badge(t.okBg,"#166534"),fontSize:11}}>✓ Reviewed</span>}
                 <button onClick={()=>setActiveOrder(o)} style={{...s.btnS(false),display:"flex",alignItems:"center",gap:4,fontSize:11}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Message</button>
-                {o.status!=="cancelled"&&o.status!=="disputed"&&<button onClick={()=>{setReportingOrder(o);setDisputeReason("");setDisputeDesc("");}} style={{...s.btnS(false),display:"flex",alignItems:"center",gap:4,fontSize:11,color:t.no}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Report Issue</button>}
+                {o.status!=="cancelled"&&o.status!=="disputed"&&o.status!=="completed"&&<button onClick={()=>{setReportingOrder(o);setDisputeReason("");setDisputeDesc("");}} style={{...s.btnS(false),display:"flex",alignItems:"center",gap:4,fontSize:11,color:t.no}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Report Issue</button>}
               </div>
             </div>
             <div style={{fontSize:10,color:t.lit,marginTop:6}}>{new Date(o.created_at).toLocaleString("en-AU",{day:"numeric",month:"short",year:"numeric",hour:"numeric",minute:"2-digit"})}</div>
