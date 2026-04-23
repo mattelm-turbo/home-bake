@@ -120,8 +120,8 @@ export default function App(){
   // ─── DB Functions ─────────────────────────────────────────────────────────
   async function loadProfile(uid){const{data}=await supabase.from("profiles").select("*").eq("id",uid).single();if(data){setProfile(data);setProfileIncomplete(!data.phone||!data.address||!data.suburb||!data.first_name);}else{setProfile(null);setProfileIncomplete(false);}}
   async function loadSellers(){
-    const{data}=await supabase.from("profiles").select(`*, menu_items(*), gallery_images(*), reviews(*)`).neq("suburb","").order("created_at",{ascending:false});
-    if(data)setSellers(data.filter(p=>p.menu_items?.length>0).map(p=>{
+    const{data}=await supabase.from("profiles").select(`*, menu_items(*), gallery_images(*), reviews(*)`).order("created_at",{ascending:false});
+    if(data)setSellers(data.filter(p=>p.menu_items?.some(m=>m.active)).map(p=>{
       const revs=p.reviews||[];
       const avg=revs.length?Math.round((revs.reduce((a,r)=>a+r.rating,0)/revs.length)*10)/10:null;
       return{...p,menu:p.menu_items.filter(m=>m.active),gallery:p.gallery_images||[],rating:avg,reviewCount:revs.length,reviewList:revs};
