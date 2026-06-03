@@ -50,6 +50,20 @@ const Stars=({r,interactive=false,onSelect=null})=>{
 };
 const GoogleIcon=()=><svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18A11.96 11.96 0 0 0 1 12c0 1.94.46 3.77 1.18 5.07l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>;
 
+// ─── Skeleton loading primitives ───────────────────────────────────────────
+const Sk=({w="100%",h=14,r=8,style={}})=><div style={{width:w,height:h,borderRadius:r,background:"linear-gradient(90deg,#ececec 25%,#f5f5f4 50%,#ececec 75%)",backgroundSize:"200% 100%",animation:"hbShimmer 1.4s ease-in-out infinite",...style}}/>;
+const SkStyle=()=><style>{`@keyframes hbShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>;
+const SellerCardSkeleton=()=><div style={{background:t.card,borderRadius:t.r,boxShadow:t.sh,overflow:"hidden"}}><div style={{padding:16}}>
+  <div style={{display:"flex",gap:12,alignItems:"center"}}><Sk w={52} h={52} r={14}/><div style={{flex:1}}><Sk w="60%" h={15}/><Sk w="40%" h={11} style={{marginTop:8}}/><Sk w="50%" h={11} style={{marginTop:6}}/></div></div>
+  <div style={{display:"flex",gap:5,marginTop:12}}><Sk w={60} h={20} r={20}/><Sk w={64} h={20} r={20}/></div>
+  <div style={{display:"flex",gap:4,marginTop:10}}><Sk w={40} h={40} r={8}/><Sk w={40} h={40} r={8}/><Sk w={40} h={40} r={8}/></div>
+</div></div>;
+const OrderCardSkeleton=()=><div style={{background:t.card,borderRadius:t.r,boxShadow:t.sh,padding:16}}>
+  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}><div style={{display:"flex",gap:10,alignItems:"center"}}><Sk w={40} h={40} r={10}/><div><Sk w={100} h={13}/><Sk w={70} h={10} style={{marginTop:6}}/></div></div><Sk w={50} h={16}/></div>
+  <Sk w="80%" h={11} style={{marginBottom:10}}/>
+  <div style={{display:"flex",justifyContent:"space-between"}}><Sk w={70} h={20} r={20}/><Sk w={90} h={20} r={8}/></div>
+</div>;
+
 const mkCss=bp=>{const mob=bp.mobile,px=mob?16:bp.tablet?24:32;return{
   page:{fontFamily:"'Inter',-apple-system,sans-serif",background:t.bg,minHeight:"100vh",color:t.txt,paddingBottom:mob?80:24},
   shell:{maxWidth:bp.desktop?1200:bp.tablet?768:"100%",margin:"0 auto",padding:mob?0:"0 16px"},
@@ -100,6 +114,7 @@ export default function App(){
   const[profile,setProfile]=useState(null);
   const[profileIncomplete,setProfileIncomplete]=useState(false);
   const[sellers,setSellers]=useState([]);
+  const[sellersLoading,setSellersLoading]=useState(true);
   const[order,setOrder]=useState(null);
   const[onboardStep,setOnboardStep]=useState(0);
   const[toast,setToast]=useState(null);
@@ -120,8 +135,9 @@ export default function App(){
   // ─── DB Functions ─────────────────────────────────────────────────────────
   async function loadProfile(uid){const{data}=await supabase.from("profiles").select("*").eq("id",uid).single();if(data){setProfile(data);setProfileIncomplete(!data.phone||!data.address||!data.suburb||!data.first_name);}else{setProfile(null);setProfileIncomplete(false);}}
   async function loadSellers(){
+    setSellersLoading(true);
     const{data}=await supabase.from("profiles").select(`*, menu_items(*), gallery_images(*)`).order("created_at",{ascending:false});
-    if(!data)return;
+    if(!data){setSellersLoading(false);return;}
     const sellers=data.filter(p=>p.menu_items?.some(m=>m.active));
     // Fetch reviews separately to avoid RLS join issues
     const sellerIds=sellers.map(p=>p.id);
@@ -132,6 +148,7 @@ export default function App(){
       const avg=pRevs.length?Math.round((pRevs.reduce((a,r)=>a+r.rating,0)/pRevs.length)*10)/10:null;
       return{...p,menu:p.menu_items.filter(m=>m.active),gallery:p.gallery_images||[],rating:avg,reviewCount:pRevs.length,reviewList:pRevs};
     }));
+    setSellersLoading(false);
   }
   async function geocodeSuburb(suburb,state){
     if(!window.google?.maps)return null;
@@ -570,6 +587,7 @@ export default function App(){
   const Account=()=>{
     const[acctTab,setAcctTab]=useState("menu");
     const[orders,setOrders]=useState([]);
+    const[ordersLoading,setOrdersLoading]=useState(true);
     const[messages,setMessages]=useState([]);
     const[msgInput,setMsgInput]=useState("");
     const[activeOrder,setActiveOrder]=useState(null);
@@ -611,6 +629,7 @@ export default function App(){
     const loadOrders=async()=>{
       const{data}=await supabase.from("orders").select(`*,order_items(*),buyer:profiles!orders_buyer_id_fkey(name,suburb),seller:profiles!orders_seller_id_fkey(name,suburb,avatar_emoji,shop_image_url)`).or(`buyer_id.eq.${session.user.id},seller_id.eq.${session.user.id}`).order("created_at",{ascending:false});
       setOrders(data||[]);
+      setOrdersLoading(false);
     };
     const loadMessages=async(orderId)=>{
       const{data}=await supabase.from("messages").select("*").eq("order_id",orderId).order("created_at",{ascending:true});
@@ -887,6 +906,7 @@ export default function App(){
         {/* Purchases (Buying) tab */}
         {acctTab==="purchases"&&<>
           <div style={{fontWeight:700,fontSize:15,marginBottom:12}}>My Purchases</div>
+          {ordersLoading?<div style={{display:"flex",flexDirection:"column",gap:10}}>{[0,1].map(i=><OrderCardSkeleton key={i}/>)}</div>:<>
           {myPurchases.length===0&&<div style={{textAlign:"center",padding:40,color:t.mut}}><div style={{fontSize:40,marginBottom:8}}>🛒</div><div style={{fontWeight:600}}>No purchases yet</div><div style={{fontSize:13,marginTop:4}}>Browse local bakers and place your first order!</div></div>}
           {myPurchases.map(o=><div key={o.id} style={{...s.card,padding:16,marginBottom:10}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
@@ -908,11 +928,13 @@ export default function App(){
             </div>
             <div style={{fontSize:10,color:t.lit,marginTop:6}}>{new Date(o.created_at).toLocaleString("en-AU",{day:"numeric",month:"short",year:"numeric",hour:"numeric",minute:"2-digit"})}</div>
           </div>)}
+          </>}
         </>}
 
         {/* Sales (Selling) tab */}
         {acctTab==="sales"&&<>
           <div style={{fontWeight:700,fontSize:15,marginBottom:12}}>My Sales</div>
+          {ordersLoading?<div style={{display:"flex",flexDirection:"column",gap:10}}>{[0,1].map(i=><OrderCardSkeleton key={i}/>)}</div>:<>
           {mySales.length===0&&<div style={{textAlign:"center",padding:40,color:t.mut}}><div style={{fontSize:40,marginBottom:8}}>🏪</div><div style={{fontWeight:600}}>No sales yet</div><div style={{fontSize:13,marginTop:4}}>Once customers order from your kitchen, they'll appear here.</div></div>}
           {mySales.map(o=><div key={o.id} style={{...s.card,padding:16,marginBottom:10}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
@@ -972,6 +994,7 @@ export default function App(){
             </div>}
             <div style={{fontSize:10,color:t.lit,marginTop:6}}>{new Date(o.created_at).toLocaleString("en-AU",{day:"numeric",month:"short",year:"numeric",hour:"numeric",minute:"2-digit"})}</div>
           </div>)}
+          </>}
         </>}
 
         {/* Messages tab */}
@@ -1012,6 +1035,7 @@ export default function App(){
 
   // ━━━ RENDER ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   return<div style={s.page}>
+    <SkStyle/>
     {ToastEl}{authModal}
     {lightbox&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.9)",zIndex:300,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}} onClick={closeLightbox}>
       <button onClick={closeLightbox} style={{position:"absolute",top:16,right:16,background:"rgba(255,255,255,0.15)",border:"none",cursor:"pointer",width:40,height:40,borderRadius:20,display:"flex",alignItems:"center",justifyContent:"center",zIndex:2}}><I d={ic.x} s={22} c="#fff"/></button>
