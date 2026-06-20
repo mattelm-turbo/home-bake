@@ -412,12 +412,13 @@ export default function App(){
 
   // ━━━ MAIN APP ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const ToastEl=toast?<div style={{position:"fixed",top:20,left:"50%",transform:"translateX(-50%)",background:t.ok,color:"#fff",padding:"10px 24px",borderRadius:24,fontSize:13,fontWeight:600,zIndex:300}}>✓ {toast}</div>:null;
-  const navItems=[{id:"browse",icon:ic.home,label:"Browse"},{id:"cart",icon:ic.cart,label:`Order${cartN?` (${cartN})`:""}`},{id:"sell",icon:ic.store,label:"Sell"},{id:"account",icon:ic.user,label:"Account"}];
+  const navItems=[{id:"browse",img:"/nav-browse.png",icon:ic.home,label:"Browse"},{id:"cart",img:"/nav-cart.png",icon:ic.cart,label:`Order${cartN?` (${cartN})`:""}`},{id:"sell",img:"/nav-sell.png",icon:ic.store,label:"Sell"},{id:"account",img:"/nav-account.png",icon:ic.user,label:"Account"}];
+  const NavIcon=({x,size})=>{const active=tab===x.id&&!view;return<img src={x.img} alt="" style={{width:size,height:size,objectFit:"contain",opacity:active?1:0.5}} onError={e=>{e.target.style.display="none";}}/>;};
 
   const NavBar=()=>{
-    if(bp.mobile)return<nav style={s.nav}>{navItems.map(x=><button key={x.id} style={s.navB(tab===x.id&&!view)} onClick={()=>handleNavClick(x.id)}><I d={x.icon} s={22}/><span>{x.label}</span></button>)}</nav>;
+    if(bp.mobile)return<nav style={s.nav}>{navItems.map(x=><button key={x.id} style={s.navB(tab===x.id&&!view)} onClick={()=>handleNavClick(x.id)}><NavIcon x={x} size={26}/><span>{x.label}</span></button>)}</nav>;
     return<nav style={s.nav}><div style={{display:"flex",alignItems:"center",gap:10,marginRight:16}}><img src="/logo-hb.png" alt="HB" style={{height:30,width:"auto"}} onError={e=>{e.target.style.display="none"}}/><span style={{fontSize:20,fontWeight:800}}><span style={{color:t.pri}}>Home</span>Baked</span></div>
-      <div style={{flex:1,display:"flex",gap:4}}>{navItems.map(x=><button key={x.id} style={s.navB(tab===x.id&&!view)} onClick={()=>handleNavClick(x.id)}><I d={x.icon} s={18}/>{x.label}</button>)}</div>
+      <div style={{flex:1,display:"flex",gap:4}}>{navItems.map(x=><button key={x.id} style={s.navB(tab===x.id&&!view)} onClick={()=>handleNavClick(x.id)}><NavIcon x={x} size={22}/>{x.label}</button>)}</div>
       {session?<button onClick={handleLogout} style={{...s.btnS(false),display:"flex",alignItems:"center",gap:6,color:t.mut}}><I d={ic.logout} s={16}/> Sign out</button>:<button onClick={()=>setShowAuth(true)} style={{...s.btnS(true)}}>Sign in</button>}
     </nav>;
   };
