@@ -111,6 +111,7 @@ export default function App(){
   const[cart,setCart]=useState([]);
   const[catF,setCatF]=useState("All");
   const[sort,setSort]=useState("distance");
+  const[radius,setRadius]=useState(20);
   const[profile,setProfile]=useState(null);
   const[profileIncomplete,setProfileIncomplete]=useState(false);
   const[sellers,setSellers]=useState([]);
@@ -270,6 +271,7 @@ export default function App(){
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
   const showToast=msg=>{setToast(msg);setTimeout(()=>setToast(null),2500);};
+  const money=v=>"$"+Number(v||0).toFixed(2);
   const addCart=(seller,item)=>{if(!requireAuth("cart"))return;setCart(p=>{const i=p.findIndex(c=>c.item.id===item.id);if(i>-1){const n=[...p];n[i]={...n[i],qty:n[i].qty+1};return n;}return[...p,{seller,item,qty:1}];});showToast(`Added ${item.name}`);};
   const rmCart=id=>setCart(p=>p.filter(c=>c.item.id!==id));
   const updQty=(id,d)=>setCart(p=>p.map(c=>c.item.id===id?{...c,qty:Math.max(1,c.qty+d)}:c));
@@ -280,7 +282,7 @@ export default function App(){
   const sellersWithDist=sellers.map(sv=>{
     const dist=(chosenSuburb&&sv.lat&&sv.lng)?Math.round(getDistance(chosenSuburb.lat,chosenSuburb.lng,sv.lat,sv.lng)*10)/10:-1;
     return{...sv,dist};
-  }).filter(sv=>sv.dist===-1||sv.dist<=20);
+  }).filter(sv=>sv.dist===-1||sv.dist<=radius);
   const handleNavClick=id=>{if((id==="sell"||id==="account"||id==="cart")&&!session){requireAuth(id);return;}setTab(id);setView(null);};
 
   // ━━━ 🫖 ERROR 418 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -434,14 +436,14 @@ export default function App(){
   const lbNext=()=>setLightbox(p=>p?{...p,index:(p.index+1)%p.images.length}:null);
   const lbGo=(i)=>setLightbox(p=>p?{...p,index:i}:null);
 
-  const mobileHeader=bp.mobile?<div style={{padding:"12px 16px 8px"}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}><div style={{display:"flex",alignItems:"center",gap:10}}><img src="/logo-hb.png" alt="HB" style={{height:32,width:"auto"}} onError={e=>{e.target.style.display="none"}}/><div><div style={{fontSize:18,fontWeight:800}}><span style={{color:t.pri}}>Home</span>Baked</div><button onClick={()=>{setChosenSuburb(null);setAddressSearch("");}} style={{fontSize:11,color:t.acc,background:"none",border:"none",cursor:"pointer",padding:0,display:"flex",alignItems:"center",gap:4}}><I d={ic.loc} s={12} c={t.acc}/> {chosenSuburb?.name||"Perth"} · 20km <span style={{color:t.lit,textDecoration:"underline",marginLeft:2}}>Change</span></button></div></div>
+  const mobileHeader=bp.mobile?<div style={{padding:"12px 16px 8px"}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}><div style={{display:"flex",alignItems:"center",gap:10}}><img src="/logo-hb.png" alt="HB" style={{height:32,width:"auto"}} onError={e=>{e.target.style.display="none"}}/><div><div style={{fontSize:18,fontWeight:800}}><span style={{color:t.pri}}>Home</span>Baked</div><button onClick={()=>{setChosenSuburb(null);setAddressSearch("");}} style={{fontSize:11,color:t.acc,background:"none",border:"none",cursor:"pointer",padding:0,display:"flex",alignItems:"center",gap:4}}><I d={ic.loc} s={12} c={t.acc}/> {chosenSuburb?.name||"Perth"} · {radius}km <span style={{color:t.lit,textDecoration:"underline",marginLeft:2}}>Change</span></button></div></div>
     {session?<div style={{width:32,height:32,borderRadius:10,background:t.priL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,cursor:"pointer"}} onClick={()=>{setTab("account");setView(null);}}>{profile?.first_name?.[0]||"?"}</div>:<button onClick={()=>setShowAuth(true)} style={{...s.btnS(true),fontSize:11}}>Sign in</button>}
   </div></div>:null;
 
   // ─── Browse Header ────────────────────────────────────────────────────────
   const browseHeader=<>
     {mobileHeader}
-    {!bp.mobile&&<div style={{padding:"0 0 8px",display:"flex",justifyContent:"space-between",alignItems:"center"}}><div style={{fontSize:13,color:t.mut,display:"flex",alignItems:"center",gap:6}}><I d={ic.loc} s={14} c={t.acc}/> Showing bakers within 20km of <strong style={{color:t.txt}}>{chosenSuburb?.fullAddress||chosenSuburb?.name||"Perth"}</strong></div><button onClick={()=>{setChosenSuburb(null);setAddressSearch("");}} style={{...s.btnS(false),fontSize:12}}>Change location</button></div>}
+    {!bp.mobile&&<div style={{padding:"0 0 8px",display:"flex",justifyContent:"space-between",alignItems:"center"}}><div style={{fontSize:13,color:t.mut,display:"flex",alignItems:"center",gap:6}}><I d={ic.loc} s={14} c={t.acc}/> Showing bakers within {radius}km of <strong style={{color:t.txt}}>{chosenSuburb?.fullAddress||chosenSuburb?.name||"Perth"}</strong></div><button onClick={()=>{setChosenSuburb(null);setAddressSearch("");}} style={{...s.btnS(false),fontSize:12}}>Change location</button></div>}
   </>;
 
   // ─── Browse ───────────────────────────────────────────────────────────────
@@ -451,6 +453,7 @@ export default function App(){
     return<>
       <div style={{padding:`0 ${s.px}px`,display:"flex",gap:6,overflowX:"auto"}}>{["All",...CATS].map(c=><button key={c} onClick={()=>setCatF(c)} style={{...s.btnS(catF===c),whiteSpace:"nowrap",flexShrink:0}}>{c}</button>)}</div>
       <div style={{padding:`8px ${s.px}px 4px`,display:"flex",gap:6,alignItems:"center"}}><span style={{fontSize:11,color:t.mut}}>Sort:</span>{[["distance","Nearest"],["rating","Top Rated"]].map(([k,l])=><button key={k} onClick={()=>setSort(k)} style={{...s.btnS(sort===k),padding:"3px 10px",fontSize:11}}>{l}</button>)}</div>
+      <div style={{padding:`4px ${s.px}px 4px`,display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}><span style={{fontSize:11,color:t.mut}}>Within:</span>{[5,10,20,50].map(r=><button key={r} onClick={()=>setRadius(r)} style={{...s.btnS(radius===r),padding:"3px 10px",fontSize:11}}>{r}km</button>)}<span style={{fontSize:11,color:t.lit,marginLeft:"auto"}}>{list.length} baker{list.length===1?"":"s"}</span></div>
       <div style={{...s.sec,marginTop:8}}>
         {sellersLoading&&<div style={s.grid}>{[0,1,2,3].map(i=><SellerCardSkeleton key={i}/>)}</div>}
         {!sellersLoading&&list.length===0&&<div style={{textAlign:"center",padding:40,color:t.mut}}><div style={{fontSize:44,marginBottom:8}}>🍰</div><div style={{fontWeight:600}}>No bakers found nearby</div><div style={{fontSize:13,marginTop:4}}>Try a different suburb or be the first to sell!</div></div>}
@@ -472,7 +475,7 @@ export default function App(){
         <p style={{fontSize:14,color:t.mut,lineHeight:1.6,margin:"0 0 10px"}}>{x.bio}</p><div style={{display:"flex",gap:5}}>{x.pickup&&<span style={s.badge(t.okBg,"#166534")}>📦 Pickup</span>}{x.delivery&&<span style={s.badge("#dbeafe","#1e40af")}>🚗 Delivery</span>}</div></div>
         <div style={{fontWeight:700,fontSize:15,marginBottom:8}}>Menu</div><div style={{display:"flex",gap:6,overflowX:"auto",marginBottom:12}}>{cats.map(c=><button key={c} onClick={()=>setMc(c)} style={{...s.btnS(mc===c),whiteSpace:"nowrap",flexShrink:0}}>{c}</button>)}</div>
         <div style={s.menuGrid}>{items.map(item=><div key={item.id} style={s.card}><div style={{padding:14}}><div style={{display:"flex",gap:12}}><div style={{width:68,height:68,borderRadius:12,background:"#fef3c7",display:"flex",alignItems:"center",justifyContent:"center",fontSize:34,flexShrink:0,overflow:"hidden"}}>{item.image_url?<img src={item.image_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:item.emoji}</div>
-          <div style={{flex:1}}><div style={{fontWeight:600,fontSize:14,marginBottom:2}}>{item.name}</div><div style={{fontSize:12,color:t.mut,lineHeight:1.5,marginBottom:4}}>{item.description}</div>{item.allergens?.length>0&&<div style={{marginBottom:4}}>{item.allergens.map(a=><span key={a} style={s.tag}>⚠ {a}</span>)}</div>}<div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontWeight:700,fontSize:17,color:t.pri}}>${Number(item.price).toFixed(2)}</span><button onClick={e=>{e.stopPropagation();addCart(x,item);}} style={s.btnS(true)}>+ Add</button></div></div></div></div></div>)}</div>
+          <div style={{flex:1}}><div style={{fontWeight:600,fontSize:14,marginBottom:2}}>{item.name}</div><div style={{fontSize:12,color:t.mut,lineHeight:1.5,marginBottom:4}}>{item.description}</div>{item.allergens?.length>0&&<div style={{marginBottom:4}}>{item.allergens.map(a=><span key={a} style={s.tag}>⚠ {a}</span>)}</div>}<div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontWeight:700,fontSize:17,color:t.pri}}>{money(item.price)}</span><button onClick={e=>{e.stopPropagation();addCart(x,item);}} style={s.btnS(true)}>+ Add</button></div></div></div></div></div>)}</div>
         {x.gallery?.length>0&&<>
           <div style={{fontWeight:700,fontSize:15,marginTop:20,marginBottom:10}}>Gallery</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
@@ -502,12 +505,12 @@ export default function App(){
     if(order)return<>{mobileHeader}<div style={s.hdr}><span style={s.hdrT}>Confirmed!</span></div><div style={{...s.sec,maxWidth:500,margin:"0 auto",textAlign:"center",padding:"40px 20px"}}><div style={{fontSize:56,marginBottom:12}}>🎉</div><div style={{fontSize:18,fontWeight:700,marginBottom:6}}>Order Placed</div><button style={s.btn(true)} onClick={()=>{setOrder(null);setTab("browse");}}>Back to Browsing</button></div></>;
     return<>{mobileHeader}<div style={s.hdr}><span style={s.hdrT}>Your Order</span></div><div style={{maxWidth:600,margin:"0 auto"}}>
       {cart.length===0?<div style={{textAlign:"center",padding:"50px 20px",color:t.mut}}><div style={{fontSize:44,marginBottom:10}}>🛒</div><div style={{fontWeight:600}}>Nothing here yet</div></div>:<div style={s.sec}>
-        {cart.map(({seller:sl,item,qty})=><div key={item.id} style={{...s.card,padding:12,marginBottom:8}}><div style={{display:"flex",gap:10,alignItems:"center"}}><div style={{width:44,height:44,borderRadius:10,background:"#fef3c7",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0,overflow:"hidden"}}>{item.image_url?<img src={item.image_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:item.emoji}</div><div style={{flex:1}}><div style={{fontWeight:600,fontSize:13}}>{item.name}</div><div style={{fontSize:11,color:t.mut}}>{sl.name}</div></div><div style={{display:"flex",alignItems:"center",gap:6}}><button onClick={()=>qty===1?rmCart(item.id):updQty(item.id,-1)} style={{...s.btnS(false),padding:"2px 8px",fontSize:14}}>{qty===1?"✕":"−"}</button><span style={{fontWeight:600,minWidth:16,textAlign:"center"}}>{qty}</span><button onClick={()=>updQty(item.id,1)} style={{...s.btnS(false),padding:"2px 8px",fontSize:14}}>+</button></div><span style={{fontWeight:700,color:t.pri,fontSize:14,minWidth:48,textAlign:"right"}}>${(item.price*qty).toFixed(2)}</span></div></div>)}
+        {cart.map(({seller:sl,item,qty})=><div key={item.id} style={{...s.card,padding:12,marginBottom:8}}><div style={{display:"flex",gap:10,alignItems:"center"}}><div style={{width:44,height:44,borderRadius:10,background:"#fef3c7",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0,overflow:"hidden"}}>{item.image_url?<img src={item.image_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:item.emoji}</div><div style={{flex:1}}><div style={{fontWeight:600,fontSize:13}}>{item.name}</div><div style={{fontSize:11,color:t.mut}}>{sl.name}</div></div><div style={{display:"flex",alignItems:"center",gap:6}}><button onClick={()=>qty===1?rmCart(item.id):updQty(item.id,-1)} style={{...s.btnS(false),padding:"2px 8px",fontSize:14}}>{qty===1?"✕":"−"}</button><span style={{fontWeight:600,minWidth:16,textAlign:"center"}}>{qty}</span><button onClick={()=>updQty(item.id,1)} style={{...s.btnS(false),padding:"2px 8px",fontSize:14}}>+</button></div><span style={{fontWeight:700,color:t.pri,fontSize:14,minWidth:48,textAlign:"right"}}>{money(item.price*qty)}</span></div></div>)}
         <div style={{marginTop:14,fontWeight:600,fontSize:14,marginBottom:8}}>Fulfilment</div>
         <div style={{display:"flex",gap:8,marginBottom:12}}><button onClick={()=>setMethod("pickup")} style={{...s.btn(method==="pickup"),padding:"10px 0"}}>📦 Pickup</button>{canDel&&<button onClick={()=>setMethod("delivery")} style={{...s.btn(method==="delivery"),padding:"10px 0"}}>🚗 Delivery +$8.50</button>}</div>
         {method==="delivery"&&<input style={{...s.inp,marginBottom:12}} placeholder="Delivery address..." value={addr} onChange={e=>setAddr(e.target.value)}/>}
-        <div style={{...s.card,padding:14}}><div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:4}}><span>Subtotal</span><span>${cartT.toFixed(2)}</span></div>{method==="delivery"&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:4}}><span>Delivery</span><span>${fee.toFixed(2)}</span></div>}<div style={{display:"flex",justifyContent:"space-between",fontWeight:700,fontSize:16,paddingTop:8,borderTop:`1px solid ${t.bdr}`}}><span>Total</span><span style={{color:t.pri}}>${(cartT+fee).toFixed(2)}</span></div></div>
-        <button style={{...s.btn(true),marginTop:14,opacity:placing?0.6:1}} disabled={placing} onClick={async()=>{if(placing)return;if(method==="delivery"&&!addr.trim()){showToast("Please enter a delivery address");return;}setPlacing(true);const ok=await placeOrder(cart,method,addr);if(ok){setOrder({method,total:cartT+fee});setCart([]);}else{setPlacing(false);}}}>{placing?"Placing order…":`Place Order · $${(cartT+fee).toFixed(2)}`}</button>
+        <div style={{...s.card,padding:14}}><div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:4}}><span>Subtotal</span><span>{money(cartT)}</span></div>{method==="delivery"&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:4}}><span>Delivery</span><span>{money(fee)}</span></div>}<div style={{display:"flex",justifyContent:"space-between",fontWeight:700,fontSize:16,paddingTop:8,borderTop:`1px solid ${t.bdr}`}}><span>Total</span><span style={{color:t.pri}}>{money(cartT+fee)}</span></div></div>
+        <button style={{...s.btn(true),marginTop:14,opacity:placing?0.6:1}} disabled={placing} onClick={async()=>{if(placing)return;if(method==="delivery"&&!addr.trim()){showToast("Please enter a delivery address");return;}setPlacing(true);const ok=await placeOrder(cart,method,addr);if(ok){setOrder({method,total:cartT+fee});setCart([]);}else{setPlacing(false);}}}>{placing?"Placing order…":`Place Order · ${money(cartT+fee)}`}</button>
       </div>}</div></>;
   };
 
@@ -569,7 +572,7 @@ export default function App(){
       <div style={{...s.card,padding:16,marginBottom:12}}><div style={{display:"flex",gap:12,alignItems:"center"}}><div style={{width:56,height:56,borderRadius:16,background:t.priL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,flexShrink:0,overflow:"hidden"}}>{profile.shop_image_url?<img src={profile.shop_image_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:(profile.avatar_emoji||"🍰")}</div><div style={{flex:1}}><div style={{fontWeight:700,fontSize:16,display:"flex",alignItems:"center",gap:6}}>{profile.name}{profile.cuisine&&<span style={{fontSize:16}}>{CUISINES.find(c=>c.name===profile.cuisine)?.flag}</span>}</div><div style={{fontSize:12,color:t.mut}}>{profile.handle} · {profile.suburb}, {profile.state}</div></div><button onClick={()=>{setStoreForm({name:profile.name,bio:profile.bio||"",suburb:profile.suburb,state:profile.state,avatar_emoji:profile.avatar_emoji||"🍰",delivery:profile.delivery,pickup:profile.pickup,shop_image_url:profile.shop_image_url||"",cuisine:profile.cuisine||""});setPhotoPreview(null);setEditingStore(true);}} style={{...s.btnS(false),display:"flex",alignItems:"center",gap:4}}><I d={ic.edit} s={14}/> Edit</button></div>{profile.bio&&<p style={{fontSize:13,color:t.mut,margin:"10px 0 0",lineHeight:1.5}}>{profile.bio}</p>}<div style={{display:"flex",gap:5,marginTop:8}}>{profile.pickup&&<span style={s.badge(t.okBg,"#166634")}>Pickup</span>}{profile.delivery&&<span style={s.badge("#dbeafe","#1e40af")}>Delivery</span>}{!profile.verified&&<span style={s.badge("#fef3c7","#92400e")}>⏳ Pending</span>}</div></div>
       {!profile.verified&&<div style={{...s.tip,background:"#fefce8",color:"#854d0e",marginBottom:12}}><strong>Reminder:</strong> Notify your council for the ✓ badge.<div style={{marginTop:8}}><button onClick={async()=>{await supabase.from("profiles").update({verified:true}).eq("id",session.user.id);loadProfile(session.user.id);}} style={{...s.btnS(true),fontSize:11}}>I've notified my council ✓</button></div></div>}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",margin:"16px 0 10px"}}><span style={{fontWeight:700,fontSize:15}}>Menu ({myMenu.length})</span><button style={s.btnS(true)} onClick={()=>{setMf({name:"",cat:"Cakes",price:"",desc:"",allergens:[],emoji:"🍰",image_url:null});setAddingItem(true);}}>+ Add Item</button></div>
-      {myMenu.map(item=><div key={item.id} style={{...s.card,padding:12,marginBottom:8}}><div style={{display:"flex",gap:10,alignItems:"center"}}><div style={{width:44,height:44,borderRadius:10,background:"#fef3c7",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0,overflow:"hidden"}}>{item.image_url?<img src={item.image_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:item.emoji}</div><div style={{flex:1}}><div style={{fontWeight:600,fontSize:13}}>{item.name}</div><div style={{fontSize:11,color:t.mut}}>{item.category} · ${Number(item.price).toFixed(2)}</div></div><button onClick={async()=>{await supabase.from("menu_items").update({active:false}).eq("id",item.id);const{data}=await supabase.from("menu_items").select("*").eq("seller_id",session.user.id).eq("active",true);setMyMenu(data||[]);await loadSellers();showToast("Item removed");}} style={{background:"none",border:"none",cursor:"pointer",color:t.no,padding:4}}><I d={ic.trash} s={16}/></button></div></div>)}
+      {myMenu.map(item=><div key={item.id} style={{...s.card,padding:12,marginBottom:8}}><div style={{display:"flex",gap:10,alignItems:"center"}}><div style={{width:44,height:44,borderRadius:10,background:"#fef3c7",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0,overflow:"hidden"}}>{item.image_url?<img src={item.image_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:item.emoji}</div><div style={{flex:1}}><div style={{fontWeight:600,fontSize:13}}>{item.name}</div><div style={{fontSize:11,color:t.mut}}>{item.category} · {money(item.price)}</div></div><button onClick={async()=>{await supabase.from("menu_items").update({active:false}).eq("id",item.id);const{data}=await supabase.from("menu_items").select("*").eq("seller_id",session.user.id).eq("active",true);setMyMenu(data||[]);await loadSellers();showToast("Item removed");}} style={{background:"none",border:"none",cursor:"pointer",color:t.no,padding:4}}><I d={ic.trash} s={16}/></button></div></div>)}
       {myMenu.length===0&&<div style={{textAlign:"center",padding:30,color:t.mut}}><div style={{fontSize:32,marginBottom:8}}>🍰</div>No items yet</div>}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",margin:"24px 0 10px"}}><span style={{fontWeight:700,fontSize:15}}>Gallery ({myGallery.length})</span></div>
       <div style={{...s.tip,background:"#eff6ff",color:"#1e40af",marginBottom:12}}>Show off your creations! Photos appear on your public store page.</div>
@@ -721,7 +724,7 @@ export default function App(){
       return<>{mobileHeader}<div style={s.hdr}><button style={s.bck} onClick={()=>{setReportingOrder(null);setDisputeReason("");setDisputeDesc("");}}><I d={ic.back}/></button><span style={s.hdrT}>Report an Issue</span></div>
         <div style={{...s.sec,maxWidth:500,margin:"0 auto"}}>
           <div style={{...s.card,padding:14,marginBottom:16}}>
-            <div style={{fontSize:13,color:t.mut}}>Order #{reportingOrder.id.slice(0,8)} · {reportingOrder.seller?.name} · ${Number(reportingOrder.total).toFixed(2)}</div>
+            <div style={{fontSize:13,color:t.mut}}>Order #{reportingOrder.id.slice(0,8)} · {reportingOrder.seller?.name} · {money(reportingOrder.total)}</div>
             <div style={{fontSize:12,color:t.lit,marginTop:2}}>{reportingOrder.order_items?.map(oi=>`${oi.quantity}x ${oi.item_name}`).join(", ")}</div>
           </div>
           <div style={{fontWeight:600,fontSize:14,marginBottom:10}}>What went wrong?</div>
@@ -770,7 +773,7 @@ export default function App(){
       const otherParty=isBuyer?activeOrder.seller:activeOrder.buyer;
       return<>{mobileHeader}<div style={s.hdr}><button style={s.bck} onClick={()=>setActiveOrder(null)}><I d={ic.back}/></button><span style={s.hdrT}>Chat with {otherParty?.name||"Seller"}</span></div>
         <div style={{...s.sec,maxWidth:600,margin:"0 auto"}}>
-          <div style={{...s.card,padding:12,marginBottom:12}}><div style={{fontSize:12,color:t.mut}}>Order #{activeOrder.id.slice(0,8)} · {activeOrder.method==="pickup"?"📦 Pickup":"🚗 Delivery"} · ${Number(activeOrder.total).toFixed(2)}</div></div>
+          <div style={{...s.card,padding:12,marginBottom:12}}><div style={{fontSize:12,color:t.mut}}>Order #{activeOrder.id.slice(0,8)} · {activeOrder.method==="pickup"?"📦 Pickup":"🚗 Delivery"} · {money(activeOrder.total)}</div></div>
           <div style={{minHeight:300,maxHeight:400,overflowY:"auto",marginBottom:12,padding:4}}>
             {messages.length===0&&<div style={{textAlign:"center",padding:40,color:t.mut}}><div style={{fontSize:32,marginBottom:8}}>💬</div><div style={{fontSize:13}}>No messages yet. Start the conversation!</div></div>}
             {messages.map(m=>{const mine=m.sender_id===session.user.id;return<div key={m.id} style={{display:"flex",justifyContent:mine?"flex-end":"flex-start",marginBottom:8}}>
@@ -920,7 +923,7 @@ export default function App(){
                 <div style={{width:40,height:40,borderRadius:10,background:t.priL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,overflow:"hidden"}}>{o.seller?.shop_image_url?<img src={o.seller.shop_image_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:(o.seller?.avatar_emoji||"🍰")}</div>
                 <div><div style={{fontWeight:600,fontSize:14}}>{o.seller?.name||"Seller"}</div><div style={{fontSize:11,color:t.mut}}>{o.seller?.suburb}</div></div>
               </div>
-              <div style={{textAlign:"right"}}><div style={{fontWeight:700,color:t.pri}}>${Number(o.total).toFixed(2)}</div><div style={{fontSize:11,color:t.mut}}>{o.method==="pickup"?"📦":"🚗"} {o.method}</div></div>
+              <div style={{textAlign:"right"}}><div style={{fontWeight:700,color:t.pri}}>{money(o.total)}</div><div style={{fontSize:11,color:t.mut}}>{o.method==="pickup"?"📦":"🚗"} {o.method}</div></div>
             </div>
             <div style={{fontSize:12,color:t.mut,marginBottom:8}}>{o.order_items?.map(oi=>`${oi.quantity}x ${oi.item_name}`).join(", ")}</div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -945,7 +948,7 @@ export default function App(){
           {mySales.map(o=><div key={o.id} style={{...s.card,padding:16,marginBottom:10}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
               <div><div style={{fontWeight:600,fontSize:14}}>Order from {o.buyer?.name||"Buyer"}</div><div style={{fontSize:11,color:t.mut}}>{o.buyer?.suburb}</div></div>
-              <div style={{textAlign:"right"}}><div style={{fontWeight:700,color:t.ok}}>${Number(o.total).toFixed(2)}</div><div style={{fontSize:11,color:t.mut}}>{o.method==="pickup"?"📦":"🚗"} {o.method}</div></div>
+              <div style={{textAlign:"right"}}><div style={{fontWeight:700,color:t.ok}}>{money(o.total)}</div><div style={{fontSize:11,color:t.mut}}>{o.method==="pickup"?"📦":"🚗"} {o.method}</div></div>
             </div>
             <div style={{fontSize:12,color:t.mut,marginBottom:8}}>{o.order_items?.map(oi=>`${oi.quantity}x ${oi.item_name}`).join(", ")}</div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
@@ -1014,7 +1017,7 @@ export default function App(){
                 <div style={{width:44,height:44,borderRadius:12,background:t.priL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,overflow:"hidden",flexShrink:0}}>{other?.shop_image_url?<img src={other.shop_image_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:(other?.avatar_emoji||"🍰")}</div>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontWeight:600,fontSize:14}}>{other?.name||"User"}</div>
-                  <div style={{fontSize:12,color:t.mut,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>Order #{o.id.slice(0,8)} · ${Number(o.total).toFixed(2)} · {o.order_items?.map(oi=>oi.item_name).join(", ")}</div>
+                  <div style={{fontSize:12,color:t.mut,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>Order #{o.id.slice(0,8)} · {money(o.total)} · {o.order_items?.map(oi=>oi.item_name).join(", ")}</div>
                 </div>
                 <div style={{textAlign:"right",flexShrink:0}}>
                   <div style={{fontSize:11,color:t.lit}}>{new Date(o.created_at).toLocaleDateString("en-AU",{day:"numeric",month:"short"})}</div>
