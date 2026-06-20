@@ -173,41 +173,52 @@ export default function App(){
   async function placeOrder(items,method,addr){
     const grouped={};
     items.forEach(({seller,item,qty})=>{if(!grouped[seller.id])grouped[seller.id]={seller,items:[]};grouped[seller.id].items.push({item,qty});});
+    // Critical path: create the orders + line items. These must succeed before we confirm.
+    const placed=[];
     for(const g of Object.values(grouped)){
       const total=g.items.reduce((s,i)=>s+i.item.price*i.qty,0)+(method==="delivery"?8.5:0);
       const{data:ord,error}=await supabase.from("orders").insert({buyer_id:session.user.id,seller_id:g.seller.id,method,delivery_address:addr,total,notes:""}).select().single();
-      if(error||!ord){showToast("Error");return null;}
-      await supabase.from("order_items").insert(g.items.map(i=>({order_id:ord.id,menu_item_id:i.item.id,item_name:i.item.name,quantity:i.qty,unit_price:i.item.price})));
-      // Email seller — new order
-      const{data:sellerProfile}=await supabase.from("profiles").select("email").eq("id",g.seller.id).single();
-      if(sellerProfile?.email){
-        const itemList=g.items.map(i=>`${i.qty}× ${i.item.name}`).join(", ");
-        await sendEmailIfEnabled(g.seller.id,"email_new_order",sellerProfile.email,
-          "🛒 New order on HomeBaked!",
-          emailHtml("You have a new order!",
-            `<p>Someone just ordered from your kitchen:</p>
-             <p style="background:#fef3c7;padding:12px;border-radius:8px"><strong>${itemList}</strong></p>
+      if(error||!ord){showToast("Couldn't place your order — please try again");return null;}
+      const{error:itemErr}=await supabase.from("order_items").insert(g.items.map(i=>({order_id:ord.id,menu_item_id:i.item.id,item_name:i.item.name,quantity:i.qty,unit_price:i.item.price})));
+      if(itemErr){showToast("Couldn't place your order — please try again");return null;}
+      placed.push({g,total});
+    }
+    // Fire notification emails in the background — the buyer doesn't wait on Resend.
+    sendOrderEmails(placed,method,session.user.id,session.user.email);
+    return true;
+  }
+  // Background email sender — runs after the order is already confirmed; never blocks the UI.
+  async function sendOrderEmails(placed,method,buyerId,buyerEmail){
+    for(const{g,total}of placed){
+      try{
+        const{data:sellerProfile}=await supabase.from("profiles").select("email").eq("id",g.seller.id).single();
+        if(sellerProfile?.email){
+          const itemList=g.items.map(i=>`${i.qty}× ${i.item.name}`).join(", ");
+          await sendEmailIfEnabled(g.seller.id,"email_new_order",sellerProfile.email,
+            "🛒 New order on HomeBaked!",
+            emailHtml("You have a new order!",
+              `<p>Someone just ordered from your kitchen:</p>
+               <p style="background:#fef3c7;padding:12px;border-radius:8px"><strong>${itemList}</strong></p>
+               <p><strong>Method:</strong> ${method==="pickup"?"📦 Pickup":"🚗 Delivery"}<br/>
+               <strong>Total:</strong> ${total.toFixed(2)}</p>
+               <p>Log in to confirm and manage the order.</p>
+               <a href="https://home-bake.pages.dev" style="display:inline-block;margin-top:8px;padding:10px 20px;background:#c2410c;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">View Order</a>`
+            )
+          );
+        }
+        await sendEmailIfEnabled(buyerId,"email_order_update",buyerEmail,
+          "✅ Order confirmed — HomeBaked",
+          emailHtml("Your order is confirmed!",
+            `<p>Thanks for ordering from <strong>${g.seller.name}</strong>!</p>
+             <p style="background:#fef3c7;padding:12px;border-radius:8px">${g.items.map(i=>`${i.qty}× ${i.item.name}`).join("<br/>")}</p>
              <p><strong>Method:</strong> ${method==="pickup"?"📦 Pickup":"🚗 Delivery"}<br/>
              <strong>Total:</strong> ${total.toFixed(2)}</p>
-             <p>Log in to confirm and manage the order.</p>
+             <p>The seller will confirm your order shortly. You can message them in the app.</p>
              <a href="https://home-bake.pages.dev" style="display:inline-block;margin-top:8px;padding:10px 20px;background:#c2410c;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">View Order</a>`
           )
         );
-      }
-      // Email buyer — order confirmation
-      await sendEmailIfEnabled(session.user.id,"email_order_update",session.user.email,
-        "✅ Order confirmed — HomeBaked",
-        emailHtml("Your order is confirmed!",
-          `<p>Thanks for ordering from <strong>${g.seller.name}</strong>!</p>
-           <p style="background:#fef3c7;padding:12px;border-radius:8px">${g.items.map(i=>`${i.qty}× ${i.item.name}`).join("<br/>")}</p>
-           <p><strong>Method:</strong> ${method==="pickup"?"📦 Pickup":"🚗 Delivery"}<br/>
-           <strong>Total:</strong> ${total.toFixed(2)}</p>
-           <p>The seller will confirm your order shortly. You can message them in the app.</p>
-           <a href="https://home-bake.pages.dev" style="display:inline-block;margin-top:8px;padding:10px 20px;background:#c2410c;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">View Order</a>`
-        )
-      );
+      }catch(e){console.error("[sendOrderEmails] Failed for seller",g.seller.id,e);}
     }
-    return true;
   }
 
   // ─── Places Search ────────────────────────────────────────────────────────
@@ -487,7 +498,7 @@ export default function App(){
   };
 
   // ─── Cart ─────────────────────────────────────────────────────────────────
-  const Cart=()=>{const[method,setMethod]=useState("pickup");const[addr,setAddr]=useState("");const fee=method==="delivery"?8.50:0;const canDel=cart.length>0&&cart.every(c=>c.seller.delivery);
+  const Cart=()=>{const[method,setMethod]=useState("pickup");const[addr,setAddr]=useState("");const[placing,setPlacing]=useState(false);const fee=method==="delivery"?8.50:0;const canDel=cart.length>0&&cart.every(c=>c.seller.delivery);
     if(order)return<>{mobileHeader}<div style={s.hdr}><span style={s.hdrT}>Confirmed!</span></div><div style={{...s.sec,maxWidth:500,margin:"0 auto",textAlign:"center",padding:"40px 20px"}}><div style={{fontSize:56,marginBottom:12}}>🎉</div><div style={{fontSize:18,fontWeight:700,marginBottom:6}}>Order Placed</div><button style={s.btn(true)} onClick={()=>{setOrder(null);setTab("browse");}}>Back to Browsing</button></div></>;
     return<>{mobileHeader}<div style={s.hdr}><span style={s.hdrT}>Your Order</span></div><div style={{maxWidth:600,margin:"0 auto"}}>
       {cart.length===0?<div style={{textAlign:"center",padding:"50px 20px",color:t.mut}}><div style={{fontSize:44,marginBottom:10}}>🛒</div><div style={{fontWeight:600}}>Nothing here yet</div></div>:<div style={s.sec}>
@@ -496,7 +507,7 @@ export default function App(){
         <div style={{display:"flex",gap:8,marginBottom:12}}><button onClick={()=>setMethod("pickup")} style={{...s.btn(method==="pickup"),padding:"10px 0"}}>📦 Pickup</button>{canDel&&<button onClick={()=>setMethod("delivery")} style={{...s.btn(method==="delivery"),padding:"10px 0"}}>🚗 Delivery +$8.50</button>}</div>
         {method==="delivery"&&<input style={{...s.inp,marginBottom:12}} placeholder="Delivery address..." value={addr} onChange={e=>setAddr(e.target.value)}/>}
         <div style={{...s.card,padding:14}}><div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:4}}><span>Subtotal</span><span>${cartT.toFixed(2)}</span></div>{method==="delivery"&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:4}}><span>Delivery</span><span>${fee.toFixed(2)}</span></div>}<div style={{display:"flex",justifyContent:"space-between",fontWeight:700,fontSize:16,paddingTop:8,borderTop:`1px solid ${t.bdr}`}}><span>Total</span><span style={{color:t.pri}}>${(cartT+fee).toFixed(2)}</span></div></div>
-        <button style={{...s.btn(true),marginTop:14}} onClick={async()=>{if(method==="delivery"&&!addr.trim())return;const ok=await placeOrder(cart,method,addr);if(ok){setOrder({method,total:cartT+fee});setCart([]);}}}>Place Order · ${(cartT+fee).toFixed(2)}</button>
+        <button style={{...s.btn(true),marginTop:14,opacity:placing?0.6:1}} disabled={placing} onClick={async()=>{if(placing)return;if(method==="delivery"&&!addr.trim()){showToast("Please enter a delivery address");return;}setPlacing(true);const ok=await placeOrder(cart,method,addr);if(ok){setOrder({method,total:cartT+fee});setCart([]);}else{setPlacing(false);}}}>{placing?"Placing order…":`Place Order · $${(cartT+fee).toFixed(2)}`}</button>
       </div>}</div></>;
   };
 
