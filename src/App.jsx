@@ -52,7 +52,7 @@ const GoogleIcon=()=><svg width="18" height="18" viewBox="0 0 24 24"><path d="M2
 
 // ─── Skeleton loading primitives ───────────────────────────────────────────
 const Sk=({w="100%",h=14,r=8,style={}})=><div style={{width:w,height:h,borderRadius:r,background:"linear-gradient(90deg,#ececec 25%,#f5f5f4 50%,#ececec 75%)",backgroundSize:"200% 100%",animation:"hbShimmer 1.4s ease-in-out infinite",...style}}/>;
-const SkStyle=()=><style>{`@keyframes hbShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>;
+const SkStyle=()=><style>{`@keyframes hbShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}.hb-noscroll{scrollbar-width:none;-ms-overflow-style:none}.hb-noscroll::-webkit-scrollbar{display:none}`}</style>;
 const SellerCardSkeleton=()=><div style={{background:t.card,borderRadius:t.r,boxShadow:t.sh,overflow:"hidden"}}><div style={{padding:16}}>
   <div style={{display:"flex",gap:12,alignItems:"center"}}><Sk w={52} h={52} r={14}/><div style={{flex:1}}><Sk w="60%" h={15}/><Sk w="40%" h={11} style={{marginTop:8}}/><Sk w="50%" h={11} style={{marginTop:6}}/></div></div>
   <div style={{display:"flex",gap:5,marginTop:12}}><Sk w={60} h={20} r={20}/><Sk w={64} h={20} r={20}/></div>
@@ -452,7 +452,7 @@ export default function App(){
     let list=sellersWithDist.filter(x=>{const mc=catF==="All"||x.menu.some(m=>m.category===catF);return mc;});
     if(sort==="distance")list.sort((a,b)=>a.dist-b.dist);else list.sort((a,b)=>b.rating-a.rating);
     return<>
-      <div style={{padding:`0 ${s.px}px`,display:"flex",gap:6,overflowX:"auto"}}>{["All",...CATS].map(c=><button key={c} onClick={()=>setCatF(c)} style={{...s.btnS(catF===c),whiteSpace:"nowrap",flexShrink:0}}>{c}</button>)}</div>
+      <div className="hb-noscroll" style={{padding:`0 ${s.px}px`,display:"flex",gap:6,overflowX:"auto"}}>{["All",...CATS].map(c=><button key={c} onClick={()=>setCatF(c)} style={{...s.btnS(catF===c),whiteSpace:"nowrap",flexShrink:0}}>{c}</button>)}</div>
       <div style={{padding:`8px ${s.px}px 4px`,display:"flex",gap:6,alignItems:"center"}}><span style={{fontSize:11,color:t.mut}}>Sort:</span>{[["distance","Nearest"],["rating","Top Rated"]].map(([k,l])=><button key={k} onClick={()=>setSort(k)} style={{...s.btnS(sort===k),padding:"3px 10px",fontSize:11}}>{l}</button>)}</div>
       <div style={{padding:`4px ${s.px}px 4px`,display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}><span style={{fontSize:11,color:t.mut}}>Within:</span>{[5,10,20,50].map(r=><button key={r} onClick={()=>setRadius(r)} style={{...s.btnS(radius===r),padding:"3px 10px",fontSize:11}}>{r}km</button>)}<span style={{fontSize:11,color:t.lit,marginLeft:"auto"}}>{list.length} baker{list.length===1?"":"s"}</span></div>
       <div style={{...s.sec,marginTop:8}}>
@@ -460,22 +460,23 @@ export default function App(){
         {!sellersLoading&&list.length===0&&<div style={{textAlign:"center",padding:40,color:t.mut}}><div style={{fontSize:44,marginBottom:8}}>🍰</div><div style={{fontWeight:600}}>No bakers found nearby</div><div style={{fontSize:13,marginTop:4}}>Try a different suburb or be the first to sell!</div></div>}
         {!sellersLoading&&<div style={s.grid}>{list.map(x=><div key={x.id} style={{...s.card,cursor:"pointer"}} onClick={()=>go({type:"seller",data:x})} onMouseEnter={e=>{e.currentTarget.style.boxShadow=t.shLg}} onMouseLeave={e=>{e.currentTarget.style.boxShadow=t.sh}}>
           <div style={{padding:16}}><div style={{display:"flex",gap:12,alignItems:"center"}}><div style={{width:52,height:52,borderRadius:14,background:t.priL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,flexShrink:0,overflow:"hidden"}}>{x.shop_image_url?<img src={x.shop_image_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:(x.avatar_emoji||"🍰")}</div>
-            <div style={{flex:1,minWidth:0}}><div style={{display:"flex",alignItems:"center",gap:6}}><span style={{fontWeight:700,fontSize:15}}>{x.name}</span>{x.cuisine&&<span style={{fontSize:14}}>{CUISINES.find(c=>c.name===x.cuisine)?.flag}</span>}{x.verified&&<span style={{fontSize:11,color:t.ok}}>✓</span>}</div><div style={{fontSize:12,color:t.mut,marginTop:1}}>{x.suburb}{x.dist>0&&x.dist<999?` · ${x.dist}km`:""}</div>                <div style={{marginTop:3}}><Stars r={x.rating}/> <span style={{fontSize:11,color:t.lit}}>{x.reviewCount>0?`(${x.reviewCount})`:"(0)"}</span></div></div></div>
+            <div style={{flex:1,minWidth:0}}><div style={{display:"flex",alignItems:"center",gap:6}}><span style={{fontWeight:700,fontSize:15}}>{x.name}</span>{x.cuisine&&<span style={{fontSize:14}}>{CUISINES.find(c=>c.name===x.cuisine)?.flag}</span>}{x.verified&&<span style={{fontSize:11,color:t.ok}}>✓</span>}</div><div style={{fontSize:12,color:t.mut,marginTop:1}}>{x.suburb}{x.dist>0&&x.dist<999?` · ${x.dist}km`:""}</div>                <div style={{marginTop:3}}><Stars r={x.rating}/> <span style={{fontSize:11,color:t.lit}}>{x.reviewCount>0?`(${x.reviewCount})`:""}</span></div></div></div>
             <div style={{display:"flex",gap:5,marginTop:10,flexWrap:"wrap"}}>{x.pickup&&<span style={s.badge(t.okBg,"#166534")}>Pickup</span>}{x.delivery&&<span style={s.badge("#dbeafe","#1e40af")}>Delivery</span>}</div>
             <div style={{display:"flex",gap:4,marginTop:8}}>{x.menu.slice(0,3).map(m=><div key={m.id} style={{width:40,height:40,borderRadius:8,background:"#fef3c7",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,overflow:"hidden"}}>{m.image_url?<img src={m.image_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:m.emoji}</div>)}{x.menu.length>3&&<div style={{width:40,height:40,borderRadius:8,background:t.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:t.mut,fontWeight:600}}>+{x.menu.length-3}</div>}</div>
           </div></div>)}</div>}
+        {!sellersLoading&&list.length>0&&list.length<=4&&(()=>{const next=[5,10,20,50].find(r=>r>radius);return<div style={{textAlign:"center",padding:"18px 16px 4px",color:t.lit,fontSize:13,lineHeight:1.5}}>{next?<>That's everyone within {radius}km. <button onClick={()=>setRadius(next)} style={{background:"none",border:"none",color:t.acc,cursor:"pointer",fontSize:13,fontWeight:600,padding:0}}>Try {next}km →</button></>:`That's everyone within ${radius}km of you.`}</div>;})()}
       </div>
     </>;
   };
 
   // ─── Seller Page ──────────────────────────────────────────────────────────
-  const SellerPage=({x})=>{const[mc,setMc]=useState("All");const cats=["All",...new Set(x.menu.map(m=>m.category))];const items=mc==="All"?x.menu:x.menu.filter(m=>m.category===mc);
+  const SellerPage=({x})=>{const[mc,setMc]=useState("All");const[itemView,setItemView]=useState(null);const cats=["All",...new Set(x.menu.map(m=>m.category))];const items=mc==="All"?x.menu:x.menu.filter(m=>m.category===mc);
     return<>{mobileHeader}<div style={s.hdr}><button style={s.bck} onClick={back}><I d={ic.back}/></button><span style={s.hdrT}>{x.name}</span></div>
       <div style={s.sec}><div style={{...s.card,padding:bp.mobile?18:24,marginBottom:16}}><div style={{display:"flex",gap:14,alignItems:"center",marginBottom:10}}><div style={{width:bp.mobile?60:72,height:bp.mobile?60:72,borderRadius:18,background:t.priL,display:"flex",alignItems:"center",justifyContent:"center",fontSize:bp.mobile?30:36,overflow:"hidden"}}>{x.shop_image_url?<img src={x.shop_image_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:(x.avatar_emoji||"🍰")}</div>
-        <div><div style={{fontWeight:700,fontSize:bp.mobile?17:20}}>{x.name}</div><div style={{fontSize:13,color:t.mut}}>{x.suburb}, {x.state}{x.dist<999?` · ${x.dist}km`:""}</div><Stars r={x.rating}/> <span style={{fontSize:11,color:t.lit}}>{x.reviewCount>0?`(${x.reviewCount} reviews)`:"(No reviews yet)"}</span></div></div>
+        <div><div style={{fontWeight:700,fontSize:bp.mobile?17:20}}>{x.name}</div><div style={{fontSize:13,color:t.mut}}>{x.suburb}, {x.state}{x.dist>0&&x.dist<999?` · ${x.dist}km`:""}</div><Stars r={x.rating}/> <span style={{fontSize:11,color:t.lit}}>{x.reviewCount>0?`(${x.reviewCount} reviews)`:""}</span></div></div>
         <p style={{fontSize:14,color:t.mut,lineHeight:1.6,margin:"0 0 10px"}}>{x.bio}</p><div style={{display:"flex",gap:5}}>{x.pickup&&<span style={s.badge(t.okBg,"#166534")}>📦 Pickup</span>}{x.delivery&&<span style={s.badge("#dbeafe","#1e40af")}>🚗 Delivery</span>}</div></div>
-        <div style={{fontWeight:700,fontSize:15,marginBottom:8}}>Menu</div><div style={{display:"flex",gap:6,overflowX:"auto",marginBottom:12}}>{cats.map(c=><button key={c} onClick={()=>setMc(c)} style={{...s.btnS(mc===c),whiteSpace:"nowrap",flexShrink:0}}>{c}</button>)}</div>
-        <div style={s.menuGrid}>{items.map(item=><div key={item.id} style={s.card}><div style={{padding:14}}><div style={{display:"flex",gap:12}}><div style={{width:68,height:68,borderRadius:12,background:"#fef3c7",display:"flex",alignItems:"center",justifyContent:"center",fontSize:34,flexShrink:0,overflow:"hidden"}}>{item.image_url?<img src={item.image_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:item.emoji}</div>
+        <div style={{fontWeight:700,fontSize:15,marginBottom:8}}>Menu</div><div className="hb-noscroll" style={{display:"flex",gap:6,overflowX:"auto",marginBottom:12}}>{cats.map(c=><button key={c} onClick={()=>setMc(c)} style={{...s.btnS(mc===c),whiteSpace:"nowrap",flexShrink:0}}>{c}</button>)}</div>
+        <div style={s.menuGrid}>{items.map(item=><div key={item.id} style={{...s.card,cursor:"pointer"}} onClick={()=>setItemView(item)}><div style={{padding:14}}><div style={{display:"flex",gap:12}}><div style={{width:68,height:68,borderRadius:12,background:"#fef3c7",display:"flex",alignItems:"center",justifyContent:"center",fontSize:34,flexShrink:0,overflow:"hidden"}}>{item.image_url?<img src={item.image_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:item.emoji}</div>
           <div style={{flex:1}}><div style={{fontWeight:600,fontSize:14,marginBottom:2}}>{item.name}</div><div style={{fontSize:12,color:t.mut,lineHeight:1.5,marginBottom:4}}>{item.description}</div>{item.allergens?.length>0&&<div style={{marginBottom:4}}>{item.allergens.map(a=><span key={a} style={s.tag}>⚠ {a}</span>)}</div>}<div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontWeight:700,fontSize:17,color:t.pri}}>{money(item.price)}</span><button onClick={e=>{e.stopPropagation();addCart(x,item);}} style={s.btnS(true)}>+ Add</button></div></div></div></div></div>)}</div>
         {x.gallery?.length>0&&<>
           <div style={{fontWeight:700,fontSize:15,marginTop:20,marginBottom:10}}>Gallery</div>
@@ -498,7 +499,28 @@ export default function App(){
             </div>)}
           </div>
         </>}
-      </div></>;
+      </div>
+      {itemView&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:250,display:"flex",alignItems:bp.mobile?"flex-end":"center",justifyContent:"center",padding:bp.mobile?0:16}} onClick={()=>setItemView(null)}>
+        <div style={{width:"100%",maxWidth:440,maxHeight:"92vh",overflowY:"auto",background:t.card,borderRadius:bp.mobile?"20px 20px 0 0":t.r,boxShadow:"0 -8px 40px rgba(0,0,0,0.25)"}} onClick={e=>e.stopPropagation()}>
+          <div style={{position:"relative"}}>
+            {itemView.image_url
+              ? <img src={itemView.image_url} alt="" style={{width:"100%",height:240,objectFit:"cover",display:"block",borderRadius:bp.mobile?"20px 20px 0 0":`${t.r} ${t.r} 0 0`}}/>
+              : <div style={{width:"100%",height:200,background:"#fef3c7",display:"flex",alignItems:"center",justifyContent:"center",fontSize:88,borderRadius:bp.mobile?"20px 20px 0 0":`${t.r} ${t.r} 0 0`}}>{itemView.emoji}</div>}
+            <button onClick={()=>setItemView(null)} aria-label="Close" style={{position:"absolute",top:12,right:12,width:34,height:34,borderRadius:17,background:"rgba(0,0,0,0.5)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><I d={ic.x} s={18} c="#fff"/></button>
+          </div>
+          <div style={{padding:20}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,marginBottom:4}}><div style={{fontWeight:700,fontSize:20}}>{itemView.name}</div><div style={{fontWeight:700,fontSize:20,color:t.pri,whiteSpace:"nowrap"}}>{money(itemView.price)}</div></div>
+            <div style={{fontSize:11,fontWeight:600,color:t.lit,textTransform:"uppercase",letterSpacing:0.5,marginBottom:12}}>{itemView.category}</div>
+            <p style={{fontSize:14,color:t.mut,lineHeight:1.6,margin:"0 0 16px"}}>{itemView.description||"No description provided."}</p>
+            <div style={{fontSize:13,fontWeight:600,marginBottom:6}}>Allergens</div>
+            {itemView.allergens?.length>0
+              ? <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:18}}>{itemView.allergens.map(a=><span key={a} style={s.badge("#fef3c7","#92400e")}>⚠ {a}</span>)}</div>
+              : <div style={{fontSize:13,color:t.mut,marginBottom:18}}>No allergens listed for this item.</div>}
+            <button style={s.btn(true)} onClick={()=>addCart(x,itemView)}>+ Add to Order · {money(itemView.price)}</button>
+          </div>
+        </div>
+      </div>}
+    </>;
   };
 
   // ─── Cart ─────────────────────────────────────────────────────────────────
@@ -886,9 +908,9 @@ export default function App(){
             </div>
           </div>
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-            <button onClick={()=>setAcctTab("settings")} style={{...s.btnS(false),display:"flex",alignItems:"center",gap:5,justifyContent:"center"}}><I d={ic.cog} s={14}/> Settings</button>
-            <button onClick={()=>{setTab("sell");setView(null);}} style={{...s.btnS(false),display:"flex",alignItems:"center",gap:5,flex:1,justifyContent:"center"}}><I d={ic.store} s={14}/> My Kitchen</button>
-            <button onClick={()=>{setEpFirst(profile?.first_name||"");setEpLast(profile?.last_name||"");setEpPhone(profile?.phone||"");setEpAddress(profile?.address||"");setEpSuburb(profile?.suburb||"");setEpState(profile?.state||"WA");setEpPostcode(profile?.postcode||"");setEditingProfile(true);}} style={{...s.btnS(false),display:"flex",alignItems:"center",gap:5,flex:1,justifyContent:"center"}}><I d={ic.edit} s={14}/> Edit Profile</button>
+            <button onClick={()=>setAcctTab("settings")} style={{...s.btnS(false),display:"flex",alignItems:"center",gap:5,flex:1,justifyContent:"center",whiteSpace:"nowrap"}}><I d={ic.cog} s={14}/> Settings</button>
+            <button onClick={()=>{setTab("sell");setView(null);}} style={{...s.btnS(false),display:"flex",alignItems:"center",gap:5,flex:1,justifyContent:"center",whiteSpace:"nowrap"}}><I d={ic.store} s={14}/> Kitchen</button>
+            <button onClick={()=>{setEpFirst(profile?.first_name||"");setEpLast(profile?.last_name||"");setEpPhone(profile?.phone||"");setEpAddress(profile?.address||"");setEpSuburb(profile?.suburb||"");setEpState(profile?.state||"WA");setEpPostcode(profile?.postcode||"");setEditingProfile(true);}} style={{...s.btnS(false),display:"flex",alignItems:"center",gap:5,flex:1,justifyContent:"center",whiteSpace:"nowrap"}}><I d={ic.edit} s={14}/> Profile</button>
           </div>
         </div>
 
