@@ -133,6 +133,9 @@ export default function App(){
 
   useEffect(()=>{if(session?.user){loadProfile(session.user.id);if(!chosenSuburb)setChosenSuburb({name:"Perth",lat:-31.9505,lng:115.8605,fullAddress:"Perth, WA"});}else{setProfile(null);}loadSellers();},[session]);
 
+  // Reset scroll to top when switching tabs or opening/closing the seller page
+  useEffect(()=>{window.scrollTo(0,0);},[tab,view]);
+
   // ─── DB Functions ─────────────────────────────────────────────────────────
   async function loadProfile(uid){const{data}=await supabase.from("profiles").select("*").eq("id",uid).single();if(data){setProfile(data);setProfileIncomplete(!data.phone||!data.address||!data.suburb||!data.first_name);}else{setProfile(null);setProfileIncomplete(false);}}
   async function loadSellers(){
